@@ -1,0 +1,31 @@
+/* src/pages/DashboardPage.css */
+.dashboard .card {
+    transition: transform 0.2s;
+    margin-bottom: 1.5rem;
+}
+
+.dashboard .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+}
+
+.dashboard .display-4 {
+    font-size: 2.5rem;
+    font-weight: 500;
+}
+
+.dashboard .btn-outline-primary:hover,
+.dashboard .btn-outline-success:hover,
+.dashboard .btn-outline-info:hover,
+.dashboard .btn-outline-warning:hover,
+.dashboard .btn-outline-danger:hover {
+    color: white;
+}
+
+.dashboard .list-group-item {
+    transition: background-color 0.2s;
+}
+
+.dashboard .list-group-item:hover {
+    background-color: #f8f9fa;
+}
