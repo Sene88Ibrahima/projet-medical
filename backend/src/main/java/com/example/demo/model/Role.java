@@ -3,5 +3,6 @@ package com.example.demo.model;
 public enum Role {
     PATIENT,
     DOCTOR,
-    ADMIN
+    ADMIN,
+    NURSE  // Ajout du rôle infirmière
 }

@@ -1,5 +1,6 @@
 package com.example.demo.dto;
 
+import com.example.demo.model.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,11 +10,10 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class AuthenticationResponse {
-    private String token;
+public class UserDTO {
+    private Long id;
     private String firstName;
     private String lastName;
     private String email;
-    private String role;
-    private String dashboardUrl; // URL de redirection vers le dashboard approprié
+    private Role role;
 }

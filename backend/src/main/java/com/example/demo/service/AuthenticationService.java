@@ -3,6 +3,7 @@ package com.example.demo.service;
 import com.example.demo.dto.AuthenticationRequest;
 import com.example.demo.dto.AuthenticationResponse;
 import com.example.demo.dto.RegisterRequest;
+import com.example.demo.model.Role;
 import com.example.demo.model.User;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.security.JwtService;
@@ -38,12 +39,15 @@ public class AuthenticationService {
 
         var jwtToken = jwtService.generateToken(user);
 
+        String dashboardUrl = getDashboardUrlByRole(user.getRole());
+
         return AuthenticationResponse.builder()
                 .token(jwtToken)
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .email(user.getEmail())
                 .role(user.getRole().name())
+                .dashboardUrl(dashboardUrl)
                 .build();
     }
 
@@ -60,12 +64,24 @@ public class AuthenticationService {
 
         var jwtToken = jwtService.generateToken(user);
 
+        String dashboardUrl = getDashboardUrlByRole(user.getRole());
+
         return AuthenticationResponse.builder()
                 .token(jwtToken)
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .email(user.getEmail())
                 .role(user.getRole().name())
+                .dashboardUrl(dashboardUrl)
                 .build();
+    }
+
+    private String getDashboardUrlByRole(Role role) {
+        return switch (role) {
+            case ADMIN -> "/admin/dashboard";
+            case DOCTOR -> "/doctor/dashboard";
+            case NURSE -> "/nurse/dashboard";
+            case PATIENT -> "/patient/dashboard";
+        };
     }
 }
