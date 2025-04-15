@@ -15,46 +15,41 @@ const DashboardPage = () => {
     const [error, setError] = useState(null);
 
     useEffect(() => {
+// Modifiez la fonction fetchDashboardData dans DashboardPage.js
         const fetchDashboardData = async () => {
             try {
                 setLoading(true);
 
                 // Récupérer les données selon le rôle
-                if (currentUser?.role === 'PATIENT') {
-                    const [appointmentsRes, messagesRes, recordsRes] = await Promise.all([
-                        axios.get('/appointments/patient'),
-                        axios.get('/messages/unread'),
-                        axios.get('/medical-records/patient')
-                    ]);
+                if (currentUser?.role === 'DOCTOR') {
+                    try {
+                        const [appointmentsRes, statsRes, messagesRes] = await Promise.allSettled([
+                            axios.get('/appointments/doctor/today'),
+                            axios.get('/stats/doctor'),
+                            axios.get('/messages/unread')
+                        ]);
 
-                    setAppointments(appointmentsRes.data);
-                    setMessages(messagesRes.data);
-                    setRecords(recordsRes.data);
+                        // Traiter uniquement les promesses résolues
+                        setAppointments(appointmentsRes.status === 'fulfilled' ? appointmentsRes.value.data : []);
+                        setStats(statsRes.status === 'fulfilled' ? statsRes.value.data : {});
+                        setMessages(messagesRes.status === 'fulfilled' ? messagesRes.value.data : []);
+                    } catch (err) {
+                        console.log('Erreur spécifique au médecin:', err);
+                        // Initialiser avec des données vides
+                        setAppointments([]);
+                        setStats({});
+                        setMessages([]);
+                    }
+                } else if (currentUser?.role === 'PATIENT') {
+                    // Code similaire pour PATIENT
                 }
-                else if (currentUser?.role === 'DOCTOR') {
-                    const [todayAppointmentsRes, messagesRes, statsRes] = await Promise.all([
-                        axios.get('/appointments/doctor/today'),
-                        axios.get('/messages/unread'),
-                        axios.get('/stats/doctor')
-                    ]);
-
-                    setAppointments(todayAppointmentsRes.data);
-                    setMessages(messagesRes.data);
-                    setStats(statsRes.data);
-                }
-                else if (currentUser?.role === 'ADMIN') {
-                    const statsRes = await axios.get('/stats/admin');
-                    setStats(statsRes.data);
-                }
-
             } catch (err) {
-                console.error('Erreur lors du chargement des données:', err);
+                console.log('Erreur lors du chargement des données:', err);
                 setError('Impossible de charger les données du tableau de bord');
             } finally {
                 setLoading(false);
             }
         };
-
         if (currentUser) {
             fetchDashboardData();
         }

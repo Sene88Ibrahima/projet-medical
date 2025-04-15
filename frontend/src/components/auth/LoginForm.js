@@ -1,7 +1,7 @@
 // src/components/auth/LoginForm.js
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const LoginForm = () => {
     const [email, setEmail] = useState('');
@@ -29,7 +29,7 @@ const LoginForm = () => {
 
     return (
         <div className="login-form-container">
-            <h2>Connexion</h2>
+            <h2>Bienvenue sur MediConnect</h2>
             {error && <div className="alert alert-danger">{error}</div>}
 
             <form onSubmit={handleSubmit}>
@@ -42,6 +42,7 @@ const LoginForm = () => {
                         onChange={(e) => setEmail(e.target.value)}
                         required
                         className="form-control"
+                        placeholder="Entrez votre email"
                     />
                 </div>
 
@@ -54,15 +55,25 @@ const LoginForm = () => {
                         onChange={(e) => setPassword(e.target.value)}
                         required
                         className="form-control"
+                        placeholder="Entrez votre mot de passe"
                     />
                 </div>
+
+                <Link to="/forgot-password" className="forgot-password">
+                    Mot de passe oublié ?
+                </Link>
 
                 <button
                     type="submit"
                     className="btn btn-primary"
                     disabled={isLoading}
                 >
-                    {isLoading ? 'Connexion...' : 'Se connecter'}
+                    {isLoading ? (
+                        <>
+                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            Connexion...
+                        </>
+                    ) : 'Se connecter'}
                 </button>
             </form>
         </div>

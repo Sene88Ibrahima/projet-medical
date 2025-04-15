@@ -2,10 +2,11 @@
 import axios from 'axios';
 
 const API_URL = 'http://localhost:8080/api/v1/auth';
+const BASE_URL = 'http://localhost:8080/api/v1';
 
 // Créer une instance d'axios avec la configuration par défaut
 const axiosInstance = axios.create({
-    baseURL: 'http://localhost:8080/api/v1',
+    baseURL: BASE_URL,
     headers: {
         'Content-Type': 'application/json'
     }
@@ -28,6 +29,10 @@ axiosInstance.interceptors.request.use(
 export const loginUser = async (credentials) => {
     try {
         const response = await axios.post(`${API_URL}/authenticate`, credentials);
+        // Stocker le token immédiatement
+        if (response.data && response.data.token) {
+            localStorage.setItem('token', response.data.token);
+        }
         return response.data;
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Échec de la connexion');
@@ -37,6 +42,10 @@ export const loginUser = async (credentials) => {
 export const registerUser = async (userData) => {
     try {
         const response = await axios.post(`${API_URL}/register`, userData);
+        // Stocker le token immédiatement
+        if (response.data && response.data.token) {
+            localStorage.setItem('token', response.data.token);
+        }
         return response.data;
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Échec de l\'inscription');

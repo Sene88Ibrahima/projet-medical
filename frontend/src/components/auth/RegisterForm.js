@@ -52,35 +52,41 @@ const RegisterForm = () => {
 
     return (
         <div className="register-form-container">
-            <h2>Création de compte</h2>
+            <h2>Rejoignez MediConnect</h2>
             {error && <div className="alert alert-danger">{error}</div>}
 
             <form onSubmit={handleSubmit}>
-                <div className="form-row">
-                    <div className="form-group col-md-6">
-                        <label htmlFor="firstName">Prénom</label>
-                        <input
-                            type="text"
-                            id="firstName"
-                            name="firstName"
-                            value={formData.firstName}
-                            onChange={handleChange}
-                            required
-                            className="form-control"
-                        />
+                <div className="row">
+                    <div className="col-md-6">
+                        <div className="form-group">
+                            <label htmlFor="firstName">Prénom</label>
+                            <input
+                                type="text"
+                                id="firstName"
+                                name="firstName"
+                                value={formData.firstName}
+                                onChange={handleChange}
+                                required
+                                className="form-control"
+                                placeholder="Votre prénom"
+                            />
+                        </div>
                     </div>
 
-                    <div className="form-group col-md-6">
-                        <label htmlFor="lastName">Nom</label>
-                        <input
-                            type="text"
-                            id="lastName"
-                            name="lastName"
-                            value={formData.lastName}
-                            onChange={handleChange}
-                            required
-                            className="form-control"
-                        />
+                    <div className="col-md-6">
+                        <div className="form-group">
+                            <label htmlFor="lastName">Nom</label>
+                            <input
+                                type="text"
+                                id="lastName"
+                                name="lastName"
+                                value={formData.lastName}
+                                onChange={handleChange}
+                                required
+                                className="form-control"
+                                placeholder="Votre nom"
+                            />
+                        </div>
                     </div>
                 </div>
 
@@ -94,6 +100,7 @@ const RegisterForm = () => {
                         onChange={handleChange}
                         required
                         className="form-control"
+                        placeholder="exemple@email.com"
                     />
                 </div>
 
@@ -108,6 +115,7 @@ const RegisterForm = () => {
                         required
                         className="form-control"
                         minLength="6"
+                        placeholder="Minimum 6 caractères"
                     />
                 </div>
 
@@ -121,6 +129,7 @@ const RegisterForm = () => {
                         onChange={handleChange}
                         required
                         className="form-control"
+                        placeholder="Confirmez votre mot de passe"
                     />
                 </div>
 
@@ -138,12 +147,29 @@ const RegisterForm = () => {
                     </select>
                 </div>
 
+                <div className="form-check mb-4">
+                    <input
+                        type="checkbox"
+                        className="form-check-input"
+                        id="termsCheck"
+                        required
+                    />
+                    <label className="form-check-label" htmlFor="termsCheck">
+                        J'accepte les <a href="/terms">conditions d'utilisation</a> et la <a href="/privacy">politique de confidentialité</a>
+                    </label>
+                </div>
+
                 <button
                     type="submit"
                     className="btn btn-primary"
                     disabled={isLoading}
                 >
-                    {isLoading ? 'Inscription...' : 'S\'inscrire'}
+                    {isLoading ? (
+                        <>
+                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            Inscription...
+                        </>
+                    ) : 'Créer mon compte'}
                 </button>
             </form>
         </div>

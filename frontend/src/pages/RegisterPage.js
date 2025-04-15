@@ -2,6 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import RegisterForm from '../components/auth/RegisterForm';
+import '../components/auth/Auth.css'; // Importation du nouveau fichier CSS
 
 const RegisterPage = () => {
     return (
@@ -10,7 +11,7 @@ const RegisterPage = () => {
                 <div className="row justify-content-center">
                     <div className="col-md-8">
                         <div className="card shadow">
-                            <div className="card-body p-5">
+                            <div className="card-body">
                                 <RegisterForm />
 
                                 <div className="mt-4 text-center">

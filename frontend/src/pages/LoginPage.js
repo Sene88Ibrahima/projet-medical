@@ -2,6 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import LoginForm from '../components/auth/LoginForm';
+import '../components/auth/Auth.css'; // Importation du nouveau fichier CSS
 
 const LoginPage = () => {
     return (
@@ -10,7 +11,7 @@ const LoginPage = () => {
                 <div className="row justify-content-center">
                     <div className="col-md-6">
                         <div className="card shadow">
-                            <div className="card-body p-5">
+                            <div className="card-body">
                                 <LoginForm />
 
                                 <div className="mt-4 text-center">
