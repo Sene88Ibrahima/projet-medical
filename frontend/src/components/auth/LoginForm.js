@@ -21,19 +21,18 @@ const LoginForm = () => {
             await login(email, password);
             navigate('/dashboard');
         } catch (err) {
-            setError(err.message || 'Échec de la connexion');
+            setError(err.message || 'Échec de la connexion. Veuillez vérifier vos identifiants.');
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <div className="login-form-container">
-            <h2>Bienvenue sur MediConnect</h2>
+        <div className="auth-form">
             {error && <div className="alert alert-danger">{error}</div>}
 
             <form onSubmit={handleSubmit}>
-                <div className="form-group">
+                <div className="form-group mb-3">
                     <label htmlFor="email">Email</label>
                     <input
                         type="email"
@@ -46,7 +45,7 @@ const LoginForm = () => {
                     />
                 </div>
 
-                <div className="form-group">
+                <div className="form-group mb-2">
                     <label htmlFor="password">Mot de passe</label>
                     <input
                         type="password"
@@ -76,6 +75,22 @@ const LoginForm = () => {
                     ) : 'Se connecter'}
                 </button>
             </form>
+
+            <div className="auth-divider mt-4">
+                <span>ou</span>
+            </div>
+
+            <div className="social-login mt-4 text-center">
+                <p className="mb-3">Se connecter avec</p>
+                <div className="d-flex justify-content-center gap-3">
+                    <button className="btn btn-outline-secondary">
+                        <i className="fab fa-google me-2"></i>Google
+                    </button>
+                    <button className="btn btn-outline-secondary">
+                        <i className="fab fa-facebook-f me-2"></i>Facebook
+                    </button>
+                </div>
+            </div>
         </div>
     );
 };

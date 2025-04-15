@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import LoginForm from '../components/auth/LoginForm';
-import '../components/auth/Auth.css'; // Importation du nouveau fichier CSS
+import '../components/auth/Auth.css';
 
 const LoginPage = () => {
     return (
@@ -10,16 +10,19 @@ const LoginPage = () => {
             <div className="container">
                 <div className="row justify-content-center">
                     <div className="col-md-6">
-                        <div className="card shadow">
-                            <div className="card-body">
+                        <div className="card auth-card">
+                            <div className="auth-header">
+                                <h2>Bienvenue sur MediConnect</h2>
+                                <p>Connectez-vous pour accéder à votre espace personnel</p>
+                            </div>
+                            <div className="auth-body">
                                 <LoginForm />
-
-                                <div className="mt-4 text-center">
-                                    <p>
-                                        Vous n'avez pas de compte ?{' '}
-                                        <Link to="/register">Créer un compte</Link>
-                                    </p>
-                                </div>
+                            </div>
+                            <div className="auth-footer">
+                                <p>
+                                    Vous n'avez pas de compte ?{' '}
+                                    <Link to="/register">Créer un compte</Link>
+                                </p>
                             </div>
                         </div>
                     </div>

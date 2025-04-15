@@ -36,6 +36,12 @@ const RegisterForm = () => {
             return;
         }
 
+        // Validation supplémentaire
+        if (formData.password.length < 6) {
+            setError('Le mot de passe doit contenir au moins 6 caractères');
+            return;
+        }
+
         setIsLoading(true);
 
         try {
@@ -44,21 +50,20 @@ const RegisterForm = () => {
             await register(registerData);
             navigate('/dashboard');
         } catch (err) {
-            setError(err.message || 'Échec de l\'inscription');
+            setError(err.message || 'Échec de l\'inscription. Veuillez réessayer.');
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <div className="register-form-container">
-            <h2>Rejoignez MediConnect</h2>
+        <div className="auth-form">
             {error && <div className="alert alert-danger">{error}</div>}
 
             <form onSubmit={handleSubmit}>
                 <div className="row">
                     <div className="col-md-6">
-                        <div className="form-group">
+                        <div className="form-group mb-3">
                             <label htmlFor="firstName">Prénom</label>
                             <input
                                 type="text"
@@ -74,7 +79,7 @@ const RegisterForm = () => {
                     </div>
 
                     <div className="col-md-6">
-                        <div className="form-group">
+                        <div className="form-group mb-3">
                             <label htmlFor="lastName">Nom</label>
                             <input
                                 type="text"
@@ -90,7 +95,7 @@ const RegisterForm = () => {
                     </div>
                 </div>
 
-                <div className="form-group">
+                <div className="form-group mb-3">
                     <label htmlFor="email">Email</label>
                     <input
                         type="email"
@@ -104,7 +109,7 @@ const RegisterForm = () => {
                     />
                 </div>
 
-                <div className="form-group">
+                <div className="form-group mb-3">
                     <label htmlFor="password">Mot de passe</label>
                     <input
                         type="password"
@@ -119,7 +124,7 @@ const RegisterForm = () => {
                     />
                 </div>
 
-                <div className="form-group">
+                <div className="form-group mb-3">
                     <label htmlFor="confirmPassword">Confirmer le mot de passe</label>
                     <input
                         type="password"
@@ -133,7 +138,7 @@ const RegisterForm = () => {
                     />
                 </div>
 
-                <div className="form-group">
+                <div className="form-group mb-3">
                     <label htmlFor="role">Vous êtes</label>
                     <select
                         id="role"
@@ -172,6 +177,22 @@ const RegisterForm = () => {
                     ) : 'Créer mon compte'}
                 </button>
             </form>
+
+            <div className="auth-divider mt-4">
+                <span>ou</span>
+            </div>
+
+            <div className="social-login mt-4 text-center">
+                <p className="mb-3">S'inscrire avec</p>
+                <div className="d-flex justify-content-center gap-3">
+                    <button className="btn btn-outline-secondary">
+                        <i className="fab fa-google me-2"></i>Google
+                    </button>
+                    <button className="btn btn-outline-secondary">
+                        <i className="fab fa-facebook-f me-2"></i>Facebook
+                    </button>
+                </div>
+            </div>
         </div>
     );
 };
