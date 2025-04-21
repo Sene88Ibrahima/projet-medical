@@ -17,22 +17,9 @@ const LoginForm = () => {
         setIsLoading(true);
 
         try {
-            // Forcer le stockage d'un état d'authentification même avant l'appel à l'API
-            localStorage.setItem('isAuthenticated', 'true');
-            
-            // Approche directe avec authentification
+            // Appel à la fonction login du AuthContext
             const userData = await login(email, password);
             console.log('Login successful:', userData);
-            
-            // Garantir que les données utilisateur sont dans localStorage
-            const userInfo = {
-                email: email,
-                firstName: userData?.firstName || 'Utilisateur',
-                lastName: userData?.lastName || '',
-                role: userData?.role || 'PATIENT'
-            };
-            
-            localStorage.setItem('currentUser', JSON.stringify(userInfo));
             
             // Pour le débogage - afficher tous les éléments dans le localStorage
             console.log("Authentification réussie, token:", localStorage.getItem('token'));
@@ -42,7 +29,7 @@ const LoginForm = () => {
                 console.log(`${key}: ${localStorage.getItem(key)}`);
             }
             
-            // Redirection directe sans setTimeout pour éviter les problèmes
+            // Redirection vers le dashboard
             window.location.href = '/dashboard';
         } catch (err) {
             console.error('Login failed:', err);

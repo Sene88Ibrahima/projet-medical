@@ -1,5 +1,5 @@
 // src/App.js
-import React, { useEffect } from 'react';
+import React from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -21,105 +21,60 @@ import Loading from './components/common/Loading';
 // Styles
 import './App.css';
 
-// Fonction globale de vérification d'authentification
-// DÉSACTIVÉ TEMPORAIREMENT POUR DÉBLOQUER L'APPLICATION
-const isAuthenticated = () => {
-  // EN MODE DÉVELOPPEMENT, TOUJOURS RETOURNER TRUE
-  console.log("Vérification d'authentification désactivée en mode développement");
-  return true;
-  
-  // Code normal à restaurer une fois le problème résolu
-  /*
-  const token = localStorage.getItem('token');
-  console.log("Vérification d'authentification, token:", token ? "présent" : "absent");
-  return !!token;
-  */
-};
-
-// PrivateRoute component - VERSION SIMPLIFIÉE POUR LE DÉVELOPPEMENT
+// PrivateRoute component - Utilise directement le contexte d'authentification
 const PrivateRoute = ({ children }) => {
-  // TOUJOURS AFFICHER LE CONTENU EN MODE DÉVELOPPEMENT
-  console.log("PrivateRoute: Mode développement - accès autorisé");
-  return children;
+  const { user, loading } = useAuth();
+  console.log("PrivateRoute: utilisateur =", user?.email || 'non authentifié', "loading =", loading);
   
-  // Code normal à restaurer une fois le problème résolu
-  /*
-  const auth = isAuthenticated();
-  console.log("PrivateRoute: auth =", auth);
+  // Si chargement en cours, afficher un loader
+  if (loading) {
+    console.log("Authentification en cours de chargement...");
+    return <Loading />;
+  }
   
-  if (!auth) {
+  // Vérifier si l'utilisateur est authentifié
+  if (!user) {
     console.log("Non authentifié, redirection vers login");
     return <Navigate to="/login" replace />;
   }
   
   console.log("Authentifié, affichage du contenu protégé");
   return children;
-  */
 };
 
-// RoleBasedRoute component - VERSION SIMPLIFIÉE POUR LE DÉVELOPPEMENT
+// RoleBasedRoute component
 const RoleBasedRoute = ({ roles, children }) => {
-  // TOUJOURS AFFICHER LE CONTENU EN MODE DÉVELOPPEMENT
-  console.log("RoleBasedRoute: Mode développement - accès autorisé");
-  return children;
+  const { user, loading } = useAuth();
+  console.log("RoleBasedRoute: utilisateur =", user?.email || 'non authentifié', "rôle =", user?.role || 'aucun');
   
-  // Code normal à restaurer une fois le problème résolu
-  /*
-  const userDataStr = localStorage.getItem('currentUser');
-  let userRole = null;
-  
-  if (userDataStr) {
-    try {
-      const userData = JSON.parse(userDataStr);
-      userRole = userData.role;
-      console.log("RoleBasedRoute: rôle détecté =", userRole);
-    } catch (e) {
-      console.error("Erreur lors du parsing des données utilisateur:", e);
-    }
+  // Si chargement en cours, afficher un loader
+  if (loading) {
+    return <Loading />;
   }
   
-  if (!userRole) {
-    console.log("Aucun rôle trouvé, redirection vers dashboard");
+  // Vérifier si l'utilisateur est authentifié
+  if (!user) {
+    console.log("Non authentifié, redirection vers login");
+    return <Navigate to="/login" replace />;
+  }
+  
+  // Vérifier si l'utilisateur a le rôle requis
+  if (!roles.includes(user.role)) {
+    console.log(`Rôle ${user.role} non autorisé pour cette route, redirection vers dashboard`);
     return <Navigate to="/dashboard" replace />;
   }
   
-  if (!roles.includes(userRole)) {
-    console.log(`Rôle ${userRole} non autorisé pour cette route, redirection vers dashboard`);
-    return <Navigate to="/dashboard" replace />;
-  }
-  
-  console.log(`Rôle ${userRole} autorisé, affichage du contenu protégé`);
+  console.log(`Rôle ${user.role} autorisé, affichage du contenu protégé`);
   return children;
-  */
 };
 
 function App() {
   // INFO DE DÉBOGAGE
   console.log("App chargée, localStorage contient:", {
-    token: localStorage.getItem('token'),
-    currentUser: localStorage.getItem('currentUser'),
+    token: localStorage.getItem('token') ? "présent" : "absent",
+    user: localStorage.getItem('user') ? "présent" : "absent",
     isAuthenticated: localStorage.getItem('isAuthenticated')
   });
-  
-  // MODE DÉVELOPPEMENT - FORCER L'AUTHENTIFICATION
-  // ⚠️ À RETIRER EN PRODUCTION ⚠️
-  useEffect(() => {
-    // Forcer un token fictif pour le développement
-    if (!localStorage.getItem('token')) {
-      console.log("⚠️ DÉVELOPPEMENT: Création d'un token fictif pour débloquer l'application");
-      localStorage.setItem('token', 'dev-token-12345');
-      localStorage.setItem('isAuthenticated', 'true');
-      
-      // Simuler un utilisateur
-      const fakeUser = {
-        firstName: 'Utilisateur',
-        lastName: 'Test',
-        email: 'dev@test.com',
-        role: 'MEDECIN'
-      };
-      localStorage.setItem('currentUser', JSON.stringify(fakeUser));
-    }
-  }, []);
   
   return (
     <AuthProvider>
@@ -127,14 +82,6 @@ function App() {
         <div className="app-container">
           <Navbar />
           <main className="main-content">
-            {/* PANNEAU DE DÉBOGAGE - Visible en mode développement */}
-            <div style={{ padding: '10px', background: '#ffeeee', margin: '10px', borderRadius: '5px' }}>
-              <h5>Mode Développement</h5>
-              <p>Authentification simulée pour débloquer l'application</p>
-              <p>Token: {localStorage.getItem('token') || 'Non défini'}</p>
-              <p>Utilisateur: {localStorage.getItem('currentUser') || 'Non défini'}</p>
-            </div>
-            
             <Routes>
               {/* Public routes */}
               <Route path="/" element={<HomePage />} />

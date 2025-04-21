@@ -1,56 +1,22 @@
 // src/components/common/Navbar.js
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const Navbar = () => {
-    const { logout } = useAuth();
+    const { user, logout, loading } = useAuth();
     const navigate = useNavigate();
-    const [userInfo, setUserInfo] = useState(null);
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
     
-    // Vérification d'authentification directement via localStorage
-    useEffect(() => {
-        const checkAuth = () => {
-            const token = localStorage.getItem('token');
-            const storedUser = localStorage.getItem('currentUser');
-            
-            if (token && storedUser) {
-                try {
-                    const userData = JSON.parse(storedUser);
-                    setUserInfo(userData);
-                    setIsAuthenticated(true);
-                    console.log("Navbar: utilisateur authentifié détecté", userData.email);
-                } catch (e) {
-                    console.error("Erreur lors du parsing des données utilisateur dans Navbar:", e);
-                    setIsAuthenticated(false);
-                    setUserInfo(null);
-                }
-            } else {
-                setIsAuthenticated(false);
-                setUserInfo(null);
-            }
-        };
-        
-        // Vérifier à l'initialisation
-        checkAuth();
-        
-        // Vérifier à chaque changement de route
-        const handleRouteChange = () => {
-            checkAuth();
-        };
-        
-        window.addEventListener('popstate', handleRouteChange);
-        
-        return () => {
-            window.removeEventListener('popstate', handleRouteChange);
-        };
-    }, []);
-
+    // Utiliser directement l'état du contexte d'authentification
+    const isAuthenticated = !!user;
+    
+    console.log("Navbar: état d'authentification =", isAuthenticated, "utilisateur =", user?.email || 'non défini');
+    
     const handleLogout = () => {
+        console.log("Déconnexion initiée depuis Navbar");
         logout();
         // Utiliser window.location.href pour un rechargement complet après déconnexion
-        window.location.href = '/';
+        window.location.href = '/login';
     };
 
     return (
@@ -80,7 +46,7 @@ const Navbar = () => {
                             </Link>
                         </li>
 
-                        {isAuthenticated && userInfo ? (
+                        {isAuthenticated && user ? (
                             <>
                                 <li className="nav-item">
                                     <Link className="nav-link" to="/dashboard">
@@ -115,7 +81,7 @@ const Navbar = () => {
                                         data-bs-toggle="dropdown"
                                         aria-expanded="false"
                                     >
-                                        {userInfo?.firstName || ''} {userInfo?.lastName || ''}
+                                        {user?.firstName || ''} {user?.lastName || ''}
                                     </a>
                                     <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
                                         <li>

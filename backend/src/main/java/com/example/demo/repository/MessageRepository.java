@@ -16,4 +16,8 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     List<Message> findConversation(User user1, User user2);
 
     List<Message> findByReceiverAndReadFalse(User receiver);
+    
+    // Récupérer tous les messages non lus envoyés par un utilisateur à un autre
+    @Query("SELECT m FROM Message m WHERE m.sender = ?1 AND m.receiver = ?2 AND m.read = false ORDER BY m.sentAt")
+    List<Message> findUnreadMessages(User sender, User receiver);
 }

@@ -1,6 +1,6 @@
 // src/context/AuthContext.js
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { loginUser, registerUser } from '../api/auth';
+import { loginUser, registerUser, validateToken } from '../api/auth';
 import axiosInstance from '../api/auth';
 
 const AuthContext = createContext(null);
@@ -11,9 +11,11 @@ const setAuthToken = (token) => {
         localStorage.setItem('token', token);
         // Définir le token dans les headers Axios pour toutes les futures requêtes
         axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        console.log("Token défini dans les headers Axios:", token.substring(0, 10) + "...");
     } else {
         localStorage.removeItem('token');
         delete axiosInstance.defaults.headers.common['Authorization'];
+        console.log("Token supprimé des headers Axios");
     }
 };
 
@@ -21,7 +23,9 @@ const setAuthToken = (token) => {
 export const isAuthenticated = () => {
     const token = localStorage.getItem('token');
     const userStr = localStorage.getItem('user');
-    return !!token && !!userStr;
+    const isAuth = !!token && !!userStr;
+    console.log("Vérification isAuthenticated():", isAuth);
+    return isAuth;
 };
 
 export const AuthProvider = ({ children }) => {
@@ -37,28 +41,27 @@ export const AuthProvider = ({ children }) => {
                 const token = localStorage.getItem('token');
                 const storedUser = localStorage.getItem('user');
                 
+                console.log("Initialisation de l'authentification:", {
+                    hasToken: !!token,
+                    hasUser: !!storedUser
+                });
+                
                 if (token && storedUser) {
                     // Définir le token pour les requêtes
                     setAuthToken(token);
                     
                     // Restaurer l'utilisateur
-                    setUser(JSON.parse(storedUser));
+                    const parsedUser = JSON.parse(storedUser);
+                    setUser(parsedUser);
+                    console.log("Utilisateur restauré depuis localStorage:", parsedUser.email);
                     
-                    // Vérifier la validité du token avec le backend
-                    try {
-                        const response = await axiosInstance.get('/api/v1/auth/validate-token');
-                        if (response.status === 200) {
-                            console.log('Token validé avec succès');
-                        }
-                    } catch (err) {
-                        console.error('Token invalide, déconnexion...');
-                        // Nettoyage en cas de token invalide
-                        handleLogout();
-                    }
+                    // IMPORTANT: Ne pas faire de validation immédiate du token
+                    // La validation peut échouer temporairement pour diverses raisons
+                    // et nous ne voulons pas déconnecter l'utilisateur inutilement
                 }
             } catch (error) {
                 console.error('Erreur d\'initialisation de l\'authentification:', error);
-                handleLogout();
+                // Ne pas se déconnecter automatiquement, juste logger l'erreur
             } finally {
                 setLoading(false);
             }
@@ -73,10 +76,12 @@ export const AuthProvider = ({ children }) => {
         setAuthError(null);
         
         try {
+            console.log("Tentative de connexion pour:", email);
             const response = await loginUser({ email, password });
             
             // Stocker le token JWT
             if (response && response.token) {
+                console.log("Token reçu après connexion");
                 setAuthToken(response.token);
                 
                 // Préparer et stocker les données utilisateur
@@ -96,6 +101,7 @@ export const AuthProvider = ({ children }) => {
                 console.log('Authentification réussie:', userData);
                 return { success: true, data: userData };
             } else {
+                console.error('Token manquant dans la réponse');
                 throw new Error('Token manquant dans la réponse');
             }
         } catch (error) {
@@ -113,10 +119,12 @@ export const AuthProvider = ({ children }) => {
         setAuthError(null);
         
         try {
+            console.log("Tentative d'inscription pour:", userData.email);
             const response = await registerUser(userData);
             
             // Stocker le token JWT
             if (response && response.token) {
+                console.log("Token reçu après inscription");
                 setAuthToken(response.token);
                 
                 // Préparer et stocker les données utilisateur
@@ -136,6 +144,7 @@ export const AuthProvider = ({ children }) => {
                 console.log('Inscription réussie:', userToStore);
                 return { success: true, data: userToStore };
             } else {
+                console.error('Token manquant dans la réponse');
                 throw new Error('Token manquant dans la réponse');
             }
         } catch (error) {
@@ -149,6 +158,7 @@ export const AuthProvider = ({ children }) => {
     
     // Fonction pour gérer la déconnexion
     const handleLogout = () => {
+        console.log("Déconnexion initiée");
         // Supprimer le token des headers
         setAuthToken(null);
         
