@@ -1,7 +1,7 @@
 // src/components/auth/LoginForm.js
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const LoginForm = () => {
     const [email, setEmail] = useState('');
@@ -10,7 +10,6 @@ const LoginForm = () => {
     const [isLoading, setIsLoading] = useState(false);
 
     const { login } = useAuth();
-    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -18,10 +17,38 @@ const LoginForm = () => {
         setIsLoading(true);
 
         try {
-            await login(email, password);
-            navigate('/dashboard');
+            // Forcer le stockage d'un état d'authentification même avant l'appel à l'API
+            localStorage.setItem('isAuthenticated', 'true');
+            
+            // Approche directe avec authentification
+            const userData = await login(email, password);
+            console.log('Login successful:', userData);
+            
+            // Garantir que les données utilisateur sont dans localStorage
+            const userInfo = {
+                email: email,
+                firstName: userData?.firstName || 'Utilisateur',
+                lastName: userData?.lastName || '',
+                role: userData?.role || 'PATIENT'
+            };
+            
+            localStorage.setItem('currentUser', JSON.stringify(userInfo));
+            
+            // Pour le débogage - afficher tous les éléments dans le localStorage
+            console.log("Authentification réussie, token:", localStorage.getItem('token'));
+            console.log('LocalStorage après login:');
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                console.log(`${key}: ${localStorage.getItem(key)}`);
+            }
+            
+            // Redirection directe sans setTimeout pour éviter les problèmes
+            window.location.href = '/dashboard';
         } catch (err) {
+            console.error('Login failed:', err);
             setError(err.message || 'Échec de la connexion. Veuillez vérifier vos identifiants.');
+            // Nettoyer les drapeaux d'authentification en cas d'échec
+            localStorage.removeItem('isAuthenticated');
         } finally {
             setIsLoading(false);
         }
@@ -30,7 +57,7 @@ const LoginForm = () => {
     return (
         <div className="auth-form">
             {error && <div className="alert alert-danger">{error}</div>}
-
+            
             <form onSubmit={handleSubmit}>
                 <div className="form-group mb-3">
                     <label htmlFor="email">Email</label>
@@ -41,11 +68,11 @@ const LoginForm = () => {
                         onChange={(e) => setEmail(e.target.value)}
                         required
                         className="form-control"
-                        placeholder="Entrez votre email"
+                        placeholder="votre@email.com"
                     />
                 </div>
 
-                <div className="form-group mb-2">
+                <div className="form-group mb-3">
                     <label htmlFor="password">Mot de passe</label>
                     <input
                         type="password"
@@ -54,43 +81,24 @@ const LoginForm = () => {
                         onChange={(e) => setPassword(e.target.value)}
                         required
                         className="form-control"
-                        placeholder="Entrez votre mot de passe"
+                        placeholder="Votre mot de passe"
                     />
                 </div>
 
-                <Link to="/forgot-password" className="forgot-password">
-                    Mot de passe oublié ?
-                </Link>
+                <div className="d-flex justify-content-end mb-3">
+                    <Link to="/forgot-password" className="text-decoration-none">
+                        Mot de passe oublié ?
+                    </Link>
+                </div>
 
-                <button
-                    type="submit"
-                    className="btn btn-primary"
+                <button 
+                    type="submit" 
+                    className="btn btn-primary w-100"
                     disabled={isLoading}
                 >
-                    {isLoading ? (
-                        <>
-                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                            Connexion...
-                        </>
-                    ) : 'Se connecter'}
+                    {isLoading ? 'Connexion en cours...' : 'Se connecter'}
                 </button>
             </form>
-
-            <div className="auth-divider mt-4">
-                <span>ou</span>
-            </div>
-
-            <div className="social-login mt-4 text-center">
-                <p className="mb-3">Se connecter avec</p>
-                <div className="d-flex justify-content-center gap-3">
-                    <button className="btn btn-outline-secondary">
-                        <i className="fab fa-google me-2"></i>Google
-                    </button>
-                    <button className="btn btn-outline-secondary">
-                        <i className="fab fa-facebook-f me-2"></i>Facebook
-                    </button>
-                </div>
-            </div>
         </div>
     );
 };

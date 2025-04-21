@@ -1,7 +1,6 @@
 // src/components/auth/RegisterForm.js
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
 
 const RegisterForm = () => {
     const [formData, setFormData] = useState({
@@ -10,13 +9,12 @@ const RegisterForm = () => {
         email: '',
         password: '',
         confirmPassword: '',
-        role: 'PATIENT' // Par défaut
+        role: 'PATIENT'
     });
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
     const { register } = useAuth();
-    const navigate = useNavigate();
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -30,13 +28,12 @@ const RegisterForm = () => {
         e.preventDefault();
         setError('');
 
-        // Validation du mot de passe
+        // Validation
         if (formData.password !== formData.confirmPassword) {
             setError('Les mots de passe ne correspondent pas');
             return;
         }
 
-        // Validation supplémentaire
         if (formData.password.length < 6) {
             setError('Le mot de passe doit contenir au moins 6 caractères');
             return;
@@ -45,11 +42,18 @@ const RegisterForm = () => {
         setIsLoading(true);
 
         try {
-            // Exclure confirmPassword
+            // Approche directe plus simple
             const { confirmPassword, ...registerData } = formData;
             await register(registerData);
-            navigate('/dashboard');
+            console.log('Registration successful');
+            
+            // Attendre un court instant pour s'assurer que tout est traité
+            setTimeout(() => {
+                // Rediriger directement avec window.location après l'inscription réussie
+                window.location.href = '/dashboard';
+            }, 500);
         } catch (err) {
+            console.error('Registration failed:', err);
             setError(err.message || 'Échec de l\'inscription. Veuillez réessayer.');
         } finally {
             setIsLoading(false);
@@ -105,7 +109,7 @@ const RegisterForm = () => {
                         onChange={handleChange}
                         required
                         className="form-control"
-                        placeholder="exemple@email.com"
+                        placeholder="votre@email.com"
                     />
                 </div>
 
@@ -119,8 +123,7 @@ const RegisterForm = () => {
                         onChange={handleChange}
                         required
                         className="form-control"
-                        minLength="6"
-                        placeholder="Minimum 6 caractères"
+                        placeholder="Mot de passe (6 caractères minimum)"
                     />
                 </div>
 
@@ -139,7 +142,7 @@ const RegisterForm = () => {
                 </div>
 
                 <div className="form-group mb-3">
-                    <label htmlFor="role">Vous êtes</label>
+                    <label htmlFor="role">Rôle</label>
                     <select
                         id="role"
                         name="role"
@@ -149,50 +152,18 @@ const RegisterForm = () => {
                     >
                         <option value="PATIENT">Patient</option>
                         <option value="DOCTOR">Médecin</option>
+                        <option value="ADMIN">Administrateur</option>
                     </select>
                 </div>
 
-                <div className="form-check mb-4">
-                    <input
-                        type="checkbox"
-                        className="form-check-input"
-                        id="termsCheck"
-                        required
-                    />
-                    <label className="form-check-label" htmlFor="termsCheck">
-                        J'accepte les <a href="/terms">conditions d'utilisation</a> et la <a href="/privacy">politique de confidentialité</a>
-                    </label>
-                </div>
-
-                <button
-                    type="submit"
-                    className="btn btn-primary"
+                <button 
+                    type="submit" 
+                    className="btn btn-primary w-100 mt-3"
                     disabled={isLoading}
                 >
-                    {isLoading ? (
-                        <>
-                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                            Inscription...
-                        </>
-                    ) : 'Créer mon compte'}
+                    {isLoading ? 'Inscription en cours...' : 'S\'inscrire'}
                 </button>
             </form>
-
-            <div className="auth-divider mt-4">
-                <span>ou</span>
-            </div>
-
-            <div className="social-login mt-4 text-center">
-                <p className="mb-3">S'inscrire avec</p>
-                <div className="d-flex justify-content-center gap-3">
-                    <button className="btn btn-outline-secondary">
-                        <i className="fab fa-google me-2"></i>Google
-                    </button>
-                    <button className="btn btn-outline-secondary">
-                        <i className="fab fa-facebook-f me-2"></i>Facebook
-                    </button>
-                </div>
-            </div>
         </div>
     );
 };

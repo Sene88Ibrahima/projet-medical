@@ -1,15 +1,56 @@
 // src/components/common/Navbar.js
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const Navbar = () => {
-    const { currentUser, logout } = useAuth();
+    const { logout } = useAuth();
     const navigate = useNavigate();
+    const [userInfo, setUserInfo] = useState(null);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    
+    // Vérification d'authentification directement via localStorage
+    useEffect(() => {
+        const checkAuth = () => {
+            const token = localStorage.getItem('token');
+            const storedUser = localStorage.getItem('currentUser');
+            
+            if (token && storedUser) {
+                try {
+                    const userData = JSON.parse(storedUser);
+                    setUserInfo(userData);
+                    setIsAuthenticated(true);
+                    console.log("Navbar: utilisateur authentifié détecté", userData.email);
+                } catch (e) {
+                    console.error("Erreur lors du parsing des données utilisateur dans Navbar:", e);
+                    setIsAuthenticated(false);
+                    setUserInfo(null);
+                }
+            } else {
+                setIsAuthenticated(false);
+                setUserInfo(null);
+            }
+        };
+        
+        // Vérifier à l'initialisation
+        checkAuth();
+        
+        // Vérifier à chaque changement de route
+        const handleRouteChange = () => {
+            checkAuth();
+        };
+        
+        window.addEventListener('popstate', handleRouteChange);
+        
+        return () => {
+            window.removeEventListener('popstate', handleRouteChange);
+        };
+    }, []);
 
     const handleLogout = () => {
         logout();
-        navigate('/');
+        // Utiliser window.location.href pour un rechargement complet après déconnexion
+        window.location.href = '/';
     };
 
     return (
@@ -22,21 +63,24 @@ const Navbar = () => {
                 <button
                     className="navbar-toggler"
                     type="button"
-                    data-toggle="collapse"
-                    data-target="#navbarNav"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#navbarNav"
+                    aria-controls="navbarNav"
+                    aria-expanded="false"
+                    aria-label="Toggle navigation"
                 >
                     <span className="navbar-toggler-icon"></span>
                 </button>
 
                 <div className="collapse navbar-collapse" id="navbarNav">
-                    <ul className="navbar-nav ml-auto">
+                    <ul className="navbar-nav ms-auto">
                         <li className="nav-item">
                             <Link className="nav-link" to="/">
                                 Accueil
                             </Link>
                         </li>
 
-                        {currentUser ? (
+                        {isAuthenticated && userInfo ? (
                             <>
                                 <li className="nav-item">
                                     <Link className="nav-link" to="/dashboard">
@@ -68,22 +112,27 @@ const Navbar = () => {
                                         href="#"
                                         id="navbarDropdown"
                                         role="button"
-                                        data-toggle="dropdown"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false"
                                     >
-                                        {currentUser.firstName} {currentUser.lastName}
+                                        {userInfo?.firstName || ''} {userInfo?.lastName || ''}
                                     </a>
-                                    <div className="dropdown-menu">
-                                        <Link className="dropdown-item" to="/profile">
-                                            Mon profil
-                                        </Link>
-                                        <div className="dropdown-divider"></div>
-                                        <button
-                                            className="dropdown-item"
-                                            onClick={handleLogout}
-                                        >
-                                            Déconnexion
-                                        </button>
-                                    </div>
+                                    <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                                        <li>
+                                            <Link className="dropdown-item" to="/profile">
+                                                Mon profil
+                                            </Link>
+                                        </li>
+                                        <li><hr className="dropdown-divider" /></li>
+                                        <li>
+                                            <button
+                                                className="dropdown-item"
+                                                onClick={handleLogout}
+                                            >
+                                                Déconnexion
+                                            </button>
+                                        </li>
+                                    </ul>
                                 </li>
                             </>
                         ) : (
@@ -93,7 +142,6 @@ const Navbar = () => {
                                         Connexion
                                     </Link>
                                 </li>
-
                                 <li className="nav-item">
                                     <Link className="nav-link" to="/register">
                                         Inscription
