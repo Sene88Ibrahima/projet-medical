@@ -173,6 +173,34 @@ export const AuthProvider = ({ children }) => {
         console.log('Déconnexion réussie');
     };
     
+    // Fonction pour mettre à jour les données utilisateur
+    const handleUpdateUserData = async (updatedUserData) => {
+        try {
+            setLoading(true);
+            
+            // Dans une application réelle, vous feriez un appel API ici
+            // Exemple:
+            // const response = await axiosInstance.put('/api/users/profile', updatedUserData);
+            
+            // Pour l'instant, mettons simplement à jour les données localement
+            console.log("Mise à jour des données utilisateur:", updatedUserData);
+            
+            // Mettre à jour localStorage
+            localStorage.setItem('user', JSON.stringify(updatedUserData));
+            
+            // Mettre à jour l'état
+            setUser(updatedUserData);
+            
+            return { success: true, data: updatedUserData };
+        } catch (error) {
+            console.error('Erreur lors de la mise à jour du profil:', error);
+            setAuthError(error.message || 'Échec de la mise à jour du profil');
+            return { success: false, error: error.message };
+        } finally {
+            setLoading(false);
+        }
+    };
+    
     // Données et fonctions exposées par le contexte
     const contextValue = {
         user,
@@ -181,7 +209,8 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated: !!user,
         login: handleLogin,
         register: handleRegister,
-        logout: handleLogout
+        logout: handleLogout,
+        updateUserData: handleUpdateUserData
     };
     
     return (

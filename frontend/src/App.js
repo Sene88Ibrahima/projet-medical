@@ -12,6 +12,9 @@ import DashboardPage from './pages/DashboardPage';
 import AppointmentsPage from './pages/AppointmentsPage';
 import MedicalRecordsPage from './pages/MedicalRecordsPage';
 import MessagesPage from './pages/MessagesPage';
+import DicomViewerPage from './pages/DicomViewerPage';
+import ProfilePage from './pages/ProfilePage';
+import EditProfilePage from './pages/EditProfilePage';
 
 // Components
 import Navbar from './components/common/Navbar';
@@ -122,6 +125,43 @@ function App() {
                   <PrivateRoute>
                     <MessagesPage />
                   </PrivateRoute>
+                }
+              />
+              
+              {/* Profil routes */}
+              <Route
+                path="/profile"
+                element={
+                  <PrivateRoute>
+                    <ProfilePage />
+                  </PrivateRoute>
+                }
+              />
+              
+              <Route
+                path="/profile/edit"
+                element={
+                  <PrivateRoute>
+                    <EditProfilePage />
+                  </PrivateRoute>
+                }
+              />
+
+              {/* Routes DICOM - accessibles uniquement aux médecins */}
+              <Route
+                path="/patients/:patientId/dicom"
+                element={
+                  <RoleBasedRoute roles={['DOCTOR', 'ADMIN']}>
+                    <DicomViewerPage />
+                  </RoleBasedRoute>
+                }
+              />
+              <Route
+                path="/patients/:patientId/dicom/:studyId"
+                element={
+                  <RoleBasedRoute roles={['DOCTOR', 'ADMIN']}>
+                    <DicomViewerPage />
+                  </RoleBasedRoute>
                 }
               />
 

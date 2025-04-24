@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import axios from '../api/auth';
-import { Modal, Button, Form } from 'react-bootstrap';
+import { Modal, Button, Form, Table } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
 
 const MedicalRecordsPage = () => {
     const { user } = useAuth();
@@ -26,11 +27,23 @@ const MedicalRecordsPage = () => {
     });
     
     // Liste fictive de patients (pour le dropdown)
-    const [patients, setPatients] = useState([
-        { id: 1, firstName: 'Jean', lastName: 'Dupont' },
-        { id: 2, firstName: 'Pierre', lastName: 'Martin' },
-        { id: 3, firstName: 'Marie', lastName: 'Lefèvre' }
-    ]);
+    const [patients, setPatients] = useState([]);
+
+    useEffect(() => {
+        // Fonction pour charger les patients
+        const fetchPatients = async () => {
+            try {
+                const response = await axios.get('/api/v1/doctor/patients');
+                setPatients(response.data);
+            } catch (error) {
+                console.error("Erreur lors du chargement des patients:", error);
+            }
+        };
+
+        if (user?.role === 'DOCTOR') {
+            fetchPatients();
+        }
+    }, [user]);
 
     useEffect(() => {
         const fetchMedicalRecords = async () => {
@@ -41,84 +54,33 @@ const MedicalRecordsPage = () => {
                 setLoading(true);
                 setFetchAttempted(true);
                 
-                // Vérifier s'il y a des dossiers médicaux stockés dans localStorage
-                const storedRecords = localStorage.getItem('user_medical_records');
-                let userRecords = [];
-                
-                if (storedRecords) {
-                    // Charger les dossiers médicaux depuis localStorage
-                    try {
-                        const parsedRecords = JSON.parse(storedRecords);
-                        userRecords = parsedRecords;
-                        console.log("Dossiers médicaux chargés depuis localStorage:", userRecords.length);
-                    } catch (e) {
-                        console.error("Erreur lors du parsing des dossiers médicaux stockés:", e);
-                    }
-                }
-                
-                if (userRecords.length === 0) {
-                    // Si aucun dossier médical n'est stocké, utiliser les données fictives
-                    // Déterminer l'endpoint en fonction du rôle de l'utilisateur
-                    let endpoint;
-                    if (user.role === 'DOCTOR') {
-                        endpoint = '/api/v1/doctor/medical-records';
-                    } else if (user.role === 'PATIENT') {
-                        endpoint = '/api/v1/patient/medical-records';
-                    } else {
-                        endpoint = '/api/v1/medical-records'; // Endpoint par défaut
-                    }
-                    
-                    // Utiliser des données fictives pour éviter les chargements infinis
-                    setTimeout(() => {
-                        // Données fictives pour le développement
-                        const mockRecords = [
-                            {
-                                id: 1,
-                                createdAt: new Date().toISOString(),
-                                diagnosis: "Grippe saisonnière",
-                                treatment: "Repos et paracétamol",
-                                notes: "Le patient présente une légère fièvre et des courbatures. Surveillance recommandée pendant 3 jours.",
-                                medicalImages: [
-                                    { id: 1, url: 'https://via.placeholder.com/400x300?text=Radiographie+1', description: "Radiographie thoracique" },
-                                    { id: 2, url: 'https://via.placeholder.com/400x300?text=Analyse+Sanguine', description: "Résultats analyse sanguine" }
-                                ],
-                                patient: { firstName: "Jean", lastName: "Dupont" },
-                                doctor: { firstName: "Marie", lastName: "Martin" }
-                            },
-                            {
-                                id: 2,
-                                createdAt: new Date(Date.now() - 7*86400000).toISOString(), // il y a une semaine
-                                diagnosis: "Contrôle annuel",
-                                treatment: "Aucun traitement nécessaire",
-                                notes: "Examen de routine. Aucune anomalie détectée.",
-                                medicalImages: [],
-                                patient: { firstName: "Pierre", lastName: "Durand" },
-                                doctor: { firstName: "Marie", lastName: "Martin" }
-                            }
-                        ];
-                        
-                        setRecords(mockRecords);
-                        // Stocker également dans localStorage
-                        localStorage.setItem('user_medical_records', JSON.stringify(mockRecords));
-                        
-                        setLoading(false);
-                        console.log("Dossiers médicaux chargés avec succès (données fictives)");
-                    }, 1000);
-                    
-                    // Code pour appeler le backend (commenté pour le moment)
-                    /*
-                    const response = await axios.get(endpoint);
-                    userRecords = response.data;
-                    localStorage.setItem('user_medical_records', JSON.stringify(userRecords));
-                    */
+                // Déterminer l'endpoint en fonction du rôle de l'utilisateur
+                let endpoint;
+                if (user.role === 'DOCTOR') {
+                    endpoint = '/api/v1/doctor/medical-records';
+                } else if (user.role === 'PATIENT') {
+                    endpoint = '/api/v1/patient/medical-records';
                 } else {
-                    // Utiliser les dossiers médicaux stockés
-                    setRecords(userRecords);
-                    setLoading(false);
+                    endpoint = '/api/v1/medical-records';
                 }
+                
+                console.log("Endpoint utilisé:", endpoint);
+                const response = await axios.get(endpoint);
+                console.log("Réponse reçue:", response.data);
+                setRecords(response.data);
+                setLoading(false);
+                console.log("Dossiers médicaux chargés avec succès");
             } catch (err) {
-                console.error("Erreur lors du chargement des dossiers médicaux:", err);
-                setError("Impossible de charger vos dossiers médicaux. Le serveur ne répond pas.");
+                console.error("Erreur détaillée:", err.response || err);
+                if (err.response?.status === 403) {
+                    setError("Vous n'avez pas les permissions nécessaires pour accéder à cette ressource.");
+                } else if (err.response?.status === 401) {
+                    setError("Votre session a expiré. Veuillez vous reconnecter.");
+                    // Rediriger vers la page de connexion
+                    window.location.href = '/login';
+                } else {
+                    setError("Impossible de charger vos dossiers médicaux. Veuillez réessayer plus tard.");
+                }
                 setLoading(false);
             }
         };
@@ -148,48 +110,103 @@ const MedicalRecordsPage = () => {
         });
     };
     
-    const handleSubmitNewRecord = (e) => {
+    const handleSubmitNewRecord = async (e) => {
         e.preventDefault();
         
-        // Créer un nouvel objet de dossier médical
-        const newRecordObj = {
-            id: Date.now(), // ID unique basé sur le timestamp
-            createdAt: new Date().toISOString(),
-            diagnosis: newRecord.diagnosis,
-            treatment: newRecord.treatment,
-            notes: newRecord.notes,
-            medicalImages: newRecord.imageFiles.map((file, index) => ({
-                id: `img-${Date.now()}-${index}`,
-                url: URL.createObjectURL(file),
-                description: file.name
-            })),
-            patient: patients.find(p => p.id.toString() === newRecord.patientId.toString()),
-            doctor: { firstName: user?.firstName || 'Dr.', lastName: user?.lastName || 'Médecin' }
-        };
-        
-        // Ajouter au tableau des dossiers médicaux
-        const updatedRecords = [...records, newRecordObj];
-        setRecords(updatedRecords);
-        
-        // Stocker dans localStorage
-        // Note: Les URLs d'objets créés avec URL.createObjectURL() sont valides uniquement
-        // pour la session en cours, donc les images ne seront pas chargées correctement
-        // après un rafraîchissement. Dans une application réelle, les images seraient
-        // uploadées sur un serveur et les URLs stockées.
-        localStorage.setItem('user_medical_records', JSON.stringify(updatedRecords));
-        
-        // Fermer la modale et réinitialiser le formulaire
-        setShowNewModal(false);
-        setNewRecord({
-            patientId: '',
-            diagnosis: '',
-            treatment: '',
-            notes: '',
-            imageFiles: []
-        });
-        
-        // Afficher un message de confirmation
-        alert("Dossier médical créé avec succès!");
+        try {
+            console.log("Début de la création du dossier médical");
+            console.log("Données du formulaire:", newRecord);
+            
+            // Téléverser les fichiers DICOM s'il y en a
+            const uploadedImages = [];
+            if (newRecord.imageFiles.length > 0) {
+                console.log("Début du téléversement des fichiers DICOM");
+                for (const file of newRecord.imageFiles) {
+                    console.log("Téléversement du fichier:", file.name);
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('patientId', newRecord.patientId);
+                    
+                    const uploadResponse = await axios.post('/api/v1/doctor/dicom/upload', formData, {
+                        headers: {
+                            'Content-Type': 'multipart/form-data'
+                        }
+                    });
+                    console.log("Réponse du téléversement:", uploadResponse.data);
+                    
+                    uploadedImages.push({
+                        orthancInstanceId: uploadResponse.data.id,
+                        imageType: file.type,
+                        description: file.name
+                    });
+                }
+                console.log("Fin du téléversement des fichiers DICOM");
+            }
+            
+            // Créer le dossier médical avec les images
+            const medicalRecordData = {
+                patientId: newRecord.patientId,
+                diagnosis: newRecord.diagnosis,
+                treatment: newRecord.treatment,
+                notes: newRecord.notes,
+                medicalImages: uploadedImages
+            };
+            
+            console.log("Données à envoyer au serveur:", medicalRecordData);
+            
+            const response = await axios.post('/api/v1/doctor/medical-records', medicalRecordData);
+            console.log("Réponse du serveur:", response.data);
+            
+            // Mettre à jour l'état local
+            const updatedRecords = [...records, response.data];
+            setRecords(updatedRecords);
+            console.log("État local mis à jour avec le nouveau dossier");
+            
+            // Fermer la modale et réinitialiser le formulaire
+            setShowNewModal(false);
+            setNewRecord({
+                patientId: '',
+                diagnosis: '',
+                treatment: '',
+                notes: '',
+                imageFiles: []
+            });
+            console.log("Formulaire réinitialisé et modale fermée");
+            
+            alert("Dossier médical créé avec succès!");
+        } catch (error) {
+            console.error("Erreur détaillée lors de la création du dossier médical:", error);
+            console.error("Réponse du serveur:", error.response?.data);
+            console.error("Status:", error.response?.status);
+            alert("Erreur lors de la création du dossier médical. Veuillez réessayer.");
+        }
+    };
+
+    const handleViewDetails = async (recordId) => {
+        try {
+            setLoading(true);
+            const response = await axios.get(`/api/v1/doctor/medical-records/${recordId}`);
+            setSelectedRecord(response.data);
+            setShowDetailsModal(true);
+        } catch (err) {
+            console.error("Erreur lors de la récupération des détails:", err);
+            setError("Impossible de charger les détails du dossier médical.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeleteRecord = async (id) => {
+        if (window.confirm('Êtes-vous sûr de vouloir supprimer ce dossier médical ?')) {
+            try {
+                await axios.delete(`/api/v1/doctor/medical-records/${id}`);
+                setRecords(records.filter(record => record.id !== id));
+                alert('Dossier médical supprimé avec succès');
+            } catch (error) {
+                console.error("Erreur lors de la suppression du dossier médical:", error);
+                alert("Erreur lors de la suppression du dossier médical");
+            }
+        }
     };
 
     // Afficher un spinner pendant le chargement
@@ -237,40 +254,48 @@ const MedicalRecordsPage = () => {
                 <div className="card">
                     <div className="card-body">
                         <div className="table-responsive">
-                            <table className="table table-hover">
+                            <Table striped bordered hover>
                                 <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>{user?.role === 'DOCTOR' ? 'Patient' : 'Médecin'}</th>
-                                    <th>Diagnostic</th>
-                                    <th>Images</th>
-                                    <th>Actions</th>
-                                </tr>
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Diagnostic</th>
+                                        <th>Traitement</th>
+                                        <th>Date de création</th>
+                                        <th>Images</th>
+                                        <th>Actions</th>
+                                    </tr>
                                 </thead>
                                 <tbody>
-                                {records.map(record => (
-                                    <tr key={record.id}>
-                                        <td>{new Date(record.createdAt).toLocaleDateString()}</td>
-                                        <td>
-                                            {user?.role === 'DOCTOR'
-                                                ? `${record.patient?.firstName} ${record.patient?.lastName}`
-                                                : `Dr. ${record.doctor?.lastName}`
-                                            }
-                                        </td>
-                                        <td>{record.diagnosis}</td>
-                                        <td>{record.medicalImages?.length || 0}</td>
-                                        <td>
-                                            <button 
-                                                className="btn btn-sm btn-outline-info"
-                                                onClick={() => handleShowDetails(record)}
-                                            >
-                                                Consulter
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
+                                    {records.map((record) => (
+                                        <tr key={record.id}>
+                                            <td>{record.patientName}</td>
+                                            <td>{record.diagnosis}</td>
+                                            <td>{record.treatment}</td>
+                                            <td>{new Date(record.createdAt).toLocaleDateString()}</td>
+                                            <td>{record.imageCount}</td>
+                                            <td>
+                                                <Button
+                                                    variant="info"
+                                                    size="sm"
+                                                    onClick={() => handleViewDetails(record.id)}
+                                                    className="me-2"
+                                                >
+                                                    Voir
+                                                </Button>
+                                                {user?.role === 'DOCTOR' && (
+                                                    <Button
+                                                        variant="danger"
+                                                        size="sm"
+                                                        onClick={() => handleDeleteRecord(record.id)}
+                                                    >
+                                                        Supprimer
+                                                    </Button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
                                 </tbody>
-                            </table>
+                            </Table>
                         </div>
                     </div>
                 </div>
@@ -370,8 +395,8 @@ const MedicalRecordsPage = () => {
                                 <p>
                                     <strong>{user?.role === 'DOCTOR' ? 'Patient:' : 'Médecin:'}</strong> {
                                         user?.role === 'DOCTOR'
-                                            ? `${selectedRecord.patient?.firstName} ${selectedRecord.patient?.lastName}`
-                                            : `Dr. ${selectedRecord.doctor?.firstName} ${selectedRecord.doctor?.lastName}`
+                                            ? selectedRecord.patientName
+                                            : selectedRecord.doctorName
                                     }
                                 </p>
                             </div>
@@ -402,17 +427,40 @@ const MedicalRecordsPage = () => {
                                         {selectedRecord.medicalImages.map((image, index) => (
                                             <div className="col-md-6 mb-3" key={image.id || index}>
                                                 <div className="card">
-                                                    <img 
-                                                        src={image.url} 
-                                                        alt={image.description || `Image ${index + 1}`}
-                                                        className="img-fluid"
-                                                    />
                                                     <div className="card-body">
                                                         <p className="card-text">{image.description || `Image ${index + 1}`}</p>
+                                                        {image.orthancInstanceId && (
+                                                            <Button
+                                                                variant="primary"
+                                                                size="sm"
+                                                                onClick={() => window.open(`/patients/${selectedRecord.patientId}/dicom/${image.orthancInstanceId}`, '_blank')}
+                                                            >
+                                                                Visualiser l'image DICOM
+                                                            </Button>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
                                         ))}
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {/* Section des images DICOM avec visualiseur intégré */}
+                            {selectedRecord && selectedRecord.patient && (
+                                <div className="mb-3">
+                                    <h5>Visualisation des images DICOM</h5>
+                                    <div className="row">
+                                        <div className="col-md-12">
+                                            <div className="dicom-viewer-container">
+                                                <iframe 
+                                                    src={`http://localhost:8042/app/explorer.html#patient?patientId=${selectedRecord.patient.id}`}
+                                                    title="Visualiseur DICOM"
+                                                    className="dicom-viewer"
+                                                    allowFullScreen
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             )}

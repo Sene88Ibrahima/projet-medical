@@ -22,105 +22,94 @@ const AppointmentsPage = () => {
         date: '',
         time: '',
         reason: '',
-        doctorId: ''
+        doctorId: '',
+        patientId: ''
     });
     
-    // Liste fictive de médecins (pour le dropdown)
-    const [doctors, setDoctors] = useState([
-        { id: 1, firstName: 'Marie', lastName: 'Martin' },
-        { id: 2, firstName: 'Jean', lastName: 'Dupont' },
-        { id: 3, firstName: 'Sophie', lastName: 'Lefèvre' }
-    ]);
+    // Listes pour les dropdowns
+    const [doctors, setDoctors] = useState([]);
+    const [patients, setPatients] = useState([]);
+
+    useEffect(() => {
+        // Fonction pour charger les médecins (pour les patients)
+        const fetchDoctors = async () => {
+            try {
+                const response = await axios.get('/api/v1/patient/doctors');
+                setDoctors(response.data);
+            } catch (error) {
+                console.error("Erreur lors du chargement des médecins:", error);
+            }
+        };
+
+        // Fonction pour charger les patients (pour les médecins)
+        const fetchPatients = async () => {
+            try {
+                const response = await axios.get('/api/v1/doctor/patients');
+                setPatients(response.data);
+            } catch (error) {
+                console.error("Erreur lors du chargement des patients:", error);
+            }
+        };
+
+        // Charger la liste appropriée selon le rôle
+        if (user?.role === 'DOCTOR') {
+            fetchPatients();
+        } else if (user?.role === 'PATIENT') {
+            fetchDoctors();
+        }
+    }, [user?.role]);
 
     useEffect(() => {
         // Fonction pour charger les rendez-vous
         const fetchAppointments = async () => {
-            if (!user || fetchAttempted) return;
+            if (!user) return;
             
             try {
                 console.log("Chargement des rendez-vous pour", user.email);
+                console.log("Token JWT:", localStorage.getItem('token'));
                 setLoading(true);
-                setFetchAttempted(true);
                 
-                // Vérifier s'il y a des rendez-vous stockés dans localStorage
-                const storedAppointments = localStorage.getItem('user_appointments');
-                let userAppointments = [];
-                
-                if (storedAppointments) {
-                    // Charger les rendez-vous depuis localStorage
-                    try {
-                        const parsedAppointments = JSON.parse(storedAppointments);
-                        userAppointments = parsedAppointments;
-                        console.log("Rendez-vous chargés depuis localStorage:", userAppointments.length);
-                    } catch (e) {
-                        console.error("Erreur lors du parsing des rendez-vous stockés:", e);
-                    }
-                }
-                
-                if (userAppointments.length === 0) {
-                    // Si aucun rendez-vous n'est stocké, utiliser les données fictives
-                    // Déterminer l'endpoint en fonction du rôle de l'utilisateur
-                    let endpoint;
-                    if (user.role === 'DOCTOR') {
-                        endpoint = '/api/v1/doctor/appointments';
-                    } else if (user.role === 'PATIENT') {
-                        endpoint = '/api/v1/patient/appointments';
-                    } else if (user.role === 'NURSE') {
-                        endpoint = '/api/v1/nurse/appointments';
-                    } else {
-                        endpoint = '/api/v1/appointments'; // Endpoint par défaut
-                    }
-                    
-                    // Simuler un délai pour le chargement
-                    setTimeout(() => {
-                        // Données fictives pour le développement
-                        const mockAppointments = [
-                            {
-                                id: 1,
-                                dateTime: new Date().toISOString(),
-                                reason: "Consultation générale",
-                                status: "SCHEDULED",
-                                patient: { firstName: "Jean", lastName: "Dupont" },
-                                doctor: { firstName: "Marie", lastName: "Martin" }
-                            },
-                            {
-                                id: 2,
-                                dateTime: new Date(Date.now() + 86400000).toISOString(), // demain
-                                reason: "Suivi traitement",
-                                status: "SCHEDULED",
-                                patient: { firstName: "Pierre", lastName: "Durand" },
-                                doctor: { firstName: "Marie", lastName: "Martin" }
-                            }
-                        ];
-                        
-                        setAppointments(mockAppointments);
-                        // Stocker également dans localStorage
-                        localStorage.setItem('user_appointments', JSON.stringify(mockAppointments));
-                        
-                        setLoading(false);
-                        console.log("Rendez-vous chargés avec succès (données fictives)");
-                    }, 1000);
-                    
-                    // Code pour appeler le backend (commenté pour le moment)
-                    /*
-                    const response = await axios.get(endpoint);
-                    userAppointments = response.data;
-                    localStorage.setItem('user_appointments', JSON.stringify(userAppointments));
-                    */
+                // Déterminer l'endpoint en fonction du rôle de l'utilisateur
+                let endpoint;
+                if (user.role === 'DOCTOR') {
+                    endpoint = '/api/v1/doctor/appointments';
+                } else if (user.role === 'PATIENT') {
+                    endpoint = '/api/v1/patient/appointments';
+                } else if (user.role === 'NURSE') {
+                    endpoint = '/api/v1/nurse/appointments';
                 } else {
-                    // Utiliser les rendez-vous stockés
-                    setAppointments(userAppointments);
-                    setLoading(false);
+                    endpoint = '/api/v1/appointments';
                 }
+                
+                console.log("Endpoint utilisé:", endpoint);
+                
+                const response = await axios.get(endpoint);
+                console.log("Réponse reçue:", response.data);
+                setAppointments(response.data);
+                setLoading(false);
+                console.log("Rendez-vous chargés avec succès");
             } catch (err) {
-                console.error("Erreur lors du chargement des rendez-vous:", err);
+                console.error("Erreur détaillée:", err.response || err);
                 setError("Impossible de charger vos rendez-vous. Le serveur ne répond pas.");
                 setLoading(false);
             }
         };
 
-        fetchAppointments();
-    }, [user, fetchAttempted]);
+        // Charger les rendez-vous immédiatement
+        if (user) {
+            fetchAppointments();
+        }
+        
+        // Mettre en place un rafraîchissement automatique toutes les 30 secondes
+        const intervalId = setInterval(() => {
+            if (user) {
+                fetchAppointments();
+            }
+        }, 30000); // 30 secondes
+        
+        // Nettoyer l'intervalle lorsque le composant est démonté
+        return () => clearInterval(intervalId);
+    }, [user]);
     
     // Gestionnaires pour les modales
     const handleShowDetails = (appointment) => {
@@ -141,57 +130,110 @@ const AppointmentsPage = () => {
         });
     };
     
-    const handleSubmitNewAppointment = (e) => {
+    const handleSubmitNewAppointment = async (e) => {
         e.preventDefault();
         
-        // Créer un nouvel objet rendez-vous
-        const appointmentDateTimeStr = `${newAppointment.date}T${newAppointment.time}:00`;
-        const newAppointmentObj = {
-            id: Date.now(), // ID unique basé sur le timestamp
-            dateTime: new Date(appointmentDateTimeStr).toISOString(),
-            reason: newAppointment.reason,
-            status: "SCHEDULED",
-            patient: { firstName: user.firstName, lastName: user.lastName },
-            doctor: doctors.find(d => d.id.toString() === newAppointment.doctorId.toString())
-        };
-        
-        // Ajouter au tableau d'appointments
-        const updatedAppointments = [...appointments, newAppointmentObj];
-        setAppointments(updatedAppointments);
-        
-        // Stocker dans localStorage
-        localStorage.setItem('user_appointments', JSON.stringify(updatedAppointments));
-        
-        // Fermer la modale et réinitialiser le formulaire
-        setShowNewModal(false);
-        setNewAppointment({
-            date: '',
-            time: '',
-            reason: '',
-            doctorId: ''
-        });
-        
-        // Afficher un message de confirmation
-        alert("Rendez-vous créé avec succès!");
+        try {
+            // Créer un nouvel objet rendez-vous
+            const appointmentDateTimeStr = `${newAppointment.date}T${newAppointment.time}:00`;
+            const newAppointmentObj = {
+                dateTime: new Date(appointmentDateTimeStr).toISOString(),
+                reason: newAppointment.reason,
+                status: "SCHEDULED",
+                notes: ""
+            };
+
+            // Ajouter le champ approprié en fonction du rôle
+            if (user.role === 'DOCTOR') {
+                newAppointmentObj.patientId = parseInt(newAppointment.patientId);
+                console.log("Médecin crée un rendez-vous pour le patient:", newAppointment.patientId);
+            } else {
+                newAppointmentObj.doctorId = parseInt(newAppointment.doctorId);
+                console.log("Patient prend rendez-vous avec le médecin:", newAppointment.doctorId);
+            }
+            
+            console.log("Envoi des données de rendez-vous:", newAppointmentObj);
+            console.log("Token JWT:", localStorage.getItem('token'));
+            
+            // Déterminer l'endpoint en fonction du rôle
+            const endpoint = user.role === 'DOCTOR' 
+                ? '/api/v1/doctor/appointments' 
+                : '/api/v1/patient/appointments';
+            
+            console.log("Endpoint utilisé pour la création:", endpoint);
+            
+            // Envoyer au backend
+            const response = await axios.post(endpoint, newAppointmentObj);
+            
+            console.log("Réponse de création:", response.data);
+            
+            // Ajouter au tableau d'appointments
+            const updatedAppointments = [...appointments, response.data];
+            setAppointments(updatedAppointments);
+            
+            // Fermer la modale et réinitialiser le formulaire
+            setShowNewModal(false);
+            setNewAppointment({
+                date: '',
+                time: '',
+                reason: '',
+                doctorId: '',
+                patientId: ''
+            });
+            
+            // Afficher un message de confirmation
+            alert("Rendez-vous créé avec succès!");
+        } catch (error) {
+            console.error("Erreur lors de la création du rendez-vous:", error);
+            
+            // Afficher des détails plus précis sur l'erreur
+            if (error.response) {
+                console.error("Statut de l'erreur:", error.response.status);
+                console.error("Message d'erreur:", error.response.data);
+                
+                if (error.response.status === 403) {
+                    alert("Erreur d'autorisation: Vous n'avez pas les permissions nécessaires pour créer ce rendez-vous. Vérifiez que votre session est active.");
+                } else {
+                    alert(`Erreur lors de la création du rendez-vous: ${error.response.data.message || 'Erreur inconnue'}`);
+                }
+            } else {
+                alert("Erreur lors de la création du rendez-vous. Veuillez réessayer ou contacter l'administrateur.");
+            }
+        }
     };
     
-    const handleCancelAppointment = () => {
+    const handleCancelAppointment = async () => {
         if (!selectedAppointment) return;
         
-        // Mettre à jour le statut dans le tableau
-        const updatedAppointments = appointments.map(app => 
-            app.id === selectedAppointment.id ? {...app, status: "CANCELLED"} : app
-        );
-        
-        setAppointments(updatedAppointments);
-        
-        // Mettre à jour localStorage
-        localStorage.setItem('user_appointments', JSON.stringify(updatedAppointments));
-        
-        setShowCancelModal(false);
-        
-        // Afficher un message de confirmation
-        alert("Rendez-vous annulé avec succès!");
+        try {
+            let endpoint;
+            
+            // Déterminer l'endpoint en fonction du rôle de l'utilisateur
+            if (user.role === 'DOCTOR') {
+                endpoint = `/api/v1/doctor/appointments/${selectedAppointment.id}/cancel`;
+            } else if (user.role === 'PATIENT') {
+                endpoint = `/api/v1/patient/appointments/${selectedAppointment.id}/cancel`;
+            } else {
+                throw new Error("Rôle non autorisé à annuler des rendez-vous");
+            }
+            
+            console.log(`Annulation du rendez-vous par ${user.role}, ID:`, selectedAppointment.id);
+            
+            // Envoyer la demande d'annulation au serveur
+            const response = await axios.post(endpoint);
+            
+            // Si la demande a réussi, mettre à jour l'affichage localement
+            const updatedAppointments = appointments.map(app => 
+                app.id === selectedAppointment.id ? response.data : app
+            );
+            
+            setAppointments(updatedAppointments);
+            setShowCancelModal(false);
+            alert("Rendez-vous annulé avec succès!");
+        } catch (error) {
+            console.error("Erreur lors de l'annulation du rendez-vous:", error);
+            alert("Erreur lors de l'annulation du rendez-vous. Veuillez réessayer.");
+        }
     };
 
     // Afficher un spinner pendant le chargement
@@ -253,8 +295,8 @@ const AppointmentsPage = () => {
                                         <td>{new Date(appointment.dateTime).toLocaleString()}</td>
                                         <td>
                                             {user?.role === 'DOCTOR'
-                                                ? `${appointment.patient?.firstName} ${appointment.patient?.lastName}`
-                                                : `Dr. ${appointment.doctor?.lastName}`
+                                                ? appointment.patientName || 'Patient non spécifié'
+                                                : appointment.doctorName || 'Médecin non spécifié'
                                             }
                                         </td>
                                         <td>{appointment.reason}</td>
@@ -323,22 +365,47 @@ const AppointmentsPage = () => {
                                 required
                             />
                         </Form.Group>
-                        <Form.Group className="mb-3">
-                            <Form.Label>Médecin</Form.Label>
-                            <Form.Select 
-                                name="doctorId"
-                                value={newAppointment.doctorId}
-                                onChange={handleNewAppointmentChange}
-                                required
-                            >
-                                <option value="">Sélectionnez un médecin</option>
-                                {doctors.map(doctor => (
-                                    <option key={doctor.id} value={doctor.id}>
-                                        Dr. {doctor.firstName} {doctor.lastName}
-                                    </option>
-                                ))}
-                            </Form.Select>
-                        </Form.Group>
+                        
+                        {/* Afficher le sélecteur de médecin pour les patients */}
+                        {user?.role === 'PATIENT' && (
+                            <Form.Group className="mb-3">
+                                <Form.Label>Médecin</Form.Label>
+                                <Form.Select 
+                                    name="doctorId"
+                                    value={newAppointment.doctorId}
+                                    onChange={handleNewAppointmentChange}
+                                    required
+                                >
+                                    <option value="">Sélectionnez un médecin</option>
+                                    {doctors.map(doctor => (
+                                        <option key={doctor.id} value={doctor.id}>
+                                            Dr. {doctor.firstName} {doctor.lastName}
+                                        </option>
+                                    ))}
+                                </Form.Select>
+                            </Form.Group>
+                        )}
+                        
+                        {/* Afficher le sélecteur de patient pour les médecins */}
+                        {user?.role === 'DOCTOR' && (
+                            <Form.Group className="mb-3">
+                                <Form.Label>Patient</Form.Label>
+                                <Form.Select 
+                                    name="patientId"
+                                    value={newAppointment.patientId}
+                                    onChange={handleNewAppointmentChange}
+                                    required
+                                >
+                                    <option value="">Sélectionnez un patient</option>
+                                    {patients.map(patient => (
+                                        <option key={patient.id} value={patient.id}>
+                                            {patient.firstName} {patient.lastName}
+                                        </option>
+                                    ))}
+                                </Form.Select>
+                            </Form.Group>
+                        )}
+                        
                         <Form.Group className="mb-3">
                             <Form.Label>Motif</Form.Label>
                             <Form.Control 
@@ -374,8 +441,8 @@ const AppointmentsPage = () => {
                             <p>
                                 <strong>{user?.role === 'DOCTOR' ? 'Patient:' : 'Médecin:'}</strong> {
                                     user?.role === 'DOCTOR'
-                                        ? `${selectedAppointment.patient?.firstName} ${selectedAppointment.patient?.lastName}`
-                                        : `Dr. ${selectedAppointment.doctor?.firstName} ${selectedAppointment.doctor?.lastName}`
+                                        ? selectedAppointment.patientName || 'Patient non spécifié'
+                                        : selectedAppointment.doctorName || 'Médecin non spécifié'
                                 }
                             </p>
                             <p><strong>Motif:</strong> {selectedAppointment.reason}</p>

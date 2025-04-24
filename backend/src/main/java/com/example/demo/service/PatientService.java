@@ -1,12 +1,14 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.AppointmentDTO;
-import com.example.demo.dto.MessageDTO;
 import com.example.demo.dto.UserDTO;
+import com.example.demo.dto.MedicalRecordDTO;
+import com.example.demo.dto.MessageDTO;
 import com.example.demo.model.*;
 import com.example.demo.repository.AppointmentRepository;
-import com.example.demo.repository.MessageRepository;
 import com.example.demo.repository.UserRepository;
+import com.example.demo.repository.MedicalRecordRepository;
+import com.example.demo.repository.MessageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -20,10 +22,11 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class NurseService {
+public class PatientService {
 
     private final UserRepository userRepository;
     private final AppointmentRepository appointmentRepository;
+    private final MedicalRecordRepository medicalRecordRepository;
     private final MessageRepository messageRepository;
 
     public List<UserDTO> getAllDoctors() {
@@ -32,28 +35,24 @@ public class NurseService {
                 .collect(Collectors.toList());
     }
 
-    public List<AppointmentDTO> getDoctorAppointments(Long doctorId) {
-        User doctor = userRepository.findById(doctorId)
-                .orElseThrow(() -> new RuntimeException("Médecin non trouvé"));
-
-        return appointmentRepository.findByDoctor(doctor).stream()
+    public List<AppointmentDTO> getPatientAppointments() {
+        User currentPatient = getCurrentUser();
+        return appointmentRepository.findByPatient(currentPatient).stream()
                 .map(this::mapToAppointmentDTO)
                 .collect(Collectors.toList());
     }
 
     public AppointmentDTO createAppointment(AppointmentDTO appointmentDTO) {
-        User patient = userRepository.findById(appointmentDTO.getPatientId())
-                .orElseThrow(() -> new RuntimeException("Patient non trouvé"));
-
+        User currentPatient = getCurrentUser();
         User doctor = userRepository.findById(appointmentDTO.getDoctorId())
                 .orElseThrow(() -> new RuntimeException("Médecin non trouvé"));
 
         Appointment appointment = Appointment.builder()
-                .patient(patient)
+                .patient(currentPatient)
                 .doctor(doctor)
                 .dateTime(appointmentDTO.getDateTime())
                 .reason(appointmentDTO.getReason())
-                .status(appointmentDTO.getStatus())
+                .status(AppointmentStatus.SCHEDULED)
                 .notes(appointmentDTO.getNotes())
                 .build();
 
@@ -62,13 +61,13 @@ public class NurseService {
     }
 
     public AppointmentDTO updateAppointment(Long id, AppointmentDTO appointmentDTO) {
+        User currentPatient = getCurrentUser();
         Appointment appointment = appointmentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Rendez-vous non trouvé"));
 
-        if (appointmentDTO.getPatientId() != null) {
-            User patient = userRepository.findById(appointmentDTO.getPatientId())
-                    .orElseThrow(() -> new RuntimeException("Patient non trouvé"));
-            appointment.setPatient(patient);
+        // Vérifier si le patient est bien celui qui a créé le rendez-vous
+        if (!appointment.getPatient().getId().equals(currentPatient.getId())) {
+            throw new RuntimeException("Vous n'êtes pas autorisé à modifier ce rendez-vous");
         }
 
         if (appointmentDTO.getDoctorId() != null) {
@@ -86,21 +85,46 @@ public class NurseService {
         return mapToAppointmentDTO(updatedAppointment);
     }
 
-    public void deleteAppointment(Long id) {
-        if (!appointmentRepository.existsById(id)) {
-            throw new RuntimeException("Rendez-vous non trouvé");
+    public AppointmentDTO cancelAppointment(Long id) {
+        User currentPatient = getCurrentUser();
+        Appointment appointment = appointmentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Rendez-vous non trouvé"));
+
+        // Vérifier si le patient est bien celui qui a créé le rendez-vous
+        if (!appointment.getPatient().getId().equals(currentPatient.getId())) {
+            throw new RuntimeException("Vous n'êtes pas autorisé à annuler ce rendez-vous");
         }
-        appointmentRepository.deleteById(id);
+        
+        // Vérifier que le rendez-vous est bien à l'état SCHEDULED
+        if (appointment.getStatus() != AppointmentStatus.SCHEDULED) {
+            throw new RuntimeException("Impossible d'annuler un rendez-vous qui n'est pas en attente");
+        }
+
+        // Mettre à jour le statut plutôt que de supprimer
+        appointment.setStatus(AppointmentStatus.CANCELLED);
+        
+        Appointment updatedAppointment = appointmentRepository.save(appointment);
+        return mapToAppointmentDTO(updatedAppointment);
     }
 
+    public List<MedicalRecordDTO> getPatientMedicalRecords() {
+        User currentPatient = getCurrentUser();
+        return medicalRecordRepository.findByPatient(currentPatient).stream()
+                .map(this::mapToMedicalRecordDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Envoie un message à un médecin ou à un autre utilisateur
+     */
     public MessageDTO sendMessage(MessageDTO messageDTO) {
-        User currentUser = getCurrentUser();
+        User currentPatient = getCurrentUser();
 
         User receiver = userRepository.findById(messageDTO.getReceiverId())
                 .orElseThrow(() -> new RuntimeException("Destinataire non trouvé"));
 
         Message message = Message.builder()
-                .sender(currentUser)
+                .sender(currentPatient)
                 .receiver(receiver)
                 .content(messageDTO.getContent())
                 .sentAt(LocalDateTime.now())
@@ -111,14 +135,33 @@ public class NurseService {
         return mapToMessageDTO(savedMessage);
     }
 
+    /**
+     * Récupère la conversation avec un utilisateur spécifique
+     */
     public List<MessageDTO> getConversation(Long userId) {
-        User currentUser = getCurrentUser();
+        User currentPatient = getCurrentUser();
         User otherUser = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
 
-        return messageRepository.findConversation(currentUser, otherUser).stream()
+        return messageRepository.findConversation(currentPatient, otherUser).stream()
                 .map(this::mapToMessageDTO)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Marque comme lus tous les messages d'une conversation
+     */
+    public void markMessagesAsRead(Long userId) {
+        User currentPatient = getCurrentUser();
+        User otherUser = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+
+        List<Message> unreadMessages = messageRepository.findUnreadMessages(otherUser, currentPatient);
+        
+        unreadMessages.forEach(message -> {
+            message.setRead(true);
+            messageRepository.save(message);
+        });
     }
 
     private User getCurrentUser() {
@@ -164,4 +207,18 @@ public class NurseService {
                 .read(message.isRead())
                 .build();
     }
-}
+
+    private MedicalRecordDTO mapToMedicalRecordDTO(MedicalRecord medicalRecord) {
+        return MedicalRecordDTO.builder()
+                .id(medicalRecord.getId())
+                .patientId(medicalRecord.getPatient().getId())
+                .patientName(medicalRecord.getPatient().getFirstName() + " " + medicalRecord.getPatient().getLastName())
+                .doctorId(medicalRecord.getDoctor().getId())
+                .doctorName(medicalRecord.getDoctor().getFirstName() + " " + medicalRecord.getDoctor().getLastName())
+                .diagnosis(medicalRecord.getDiagnosis())
+                .treatment(medicalRecord.getTreatment())
+                .createdAt(medicalRecord.getCreatedAt())
+                .notes(medicalRecord.getNotes())
+                .build();
+    }
+} 

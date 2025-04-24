@@ -34,7 +34,7 @@ public class OrthancController {
     @GetMapping("/studies")
     @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN')")
     public ResponseEntity<List<DicomStudyDTO>> getAllStudies(
-            @RequestParam(required = false) String patientId) {
+            @RequestParam String patientId) {
         return ResponseEntity.ok(orthancService.getAllStudies(patientId));
     }
 

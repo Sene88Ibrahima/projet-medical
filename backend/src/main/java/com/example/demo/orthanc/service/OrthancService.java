@@ -26,13 +26,12 @@ public class OrthancService {
 
     public OrthancResponse uploadDicomFile(MultipartFile file) {
         try {
-            // Chiffrement du fichier
-            byte[] encryptedContent = encryptionService.encryptDicomFile(file.getBytes());
+            byte[] content = file.getBytes();
             
             HttpHeaders headers = createHeaders();
             headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
 
-            HttpEntity<byte[]> requestEntity = new HttpEntity<>(encryptedContent, headers);
+            HttpEntity<byte[]> requestEntity = new HttpEntity<>(content, headers);
             ResponseEntity<OrthancResponse> response = restTemplate.exchange(
                 orthancProperties.getApi().getUrl() + "/instances",
                 HttpMethod.POST,

@@ -1,31 +1,114 @@
 /* src/pages/DashboardPage.css */
-.dashboard .card {
-    transition: transform 0.2s;
+.dashboard-container .card {
+    transition: all 0.2s ease;
     margin-bottom: 1.5rem;
+    border-radius: 10px;
 }
 
-.dashboard .card:hover {
+.dashboard-container .card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.08);
 }
 
-.dashboard .display-4 {
+.dashboard-container .display-4 {
     font-size: 2.5rem;
     font-weight: 500;
 }
 
-.dashboard .btn-outline-primary:hover,
-.dashboard .btn-outline-success:hover,
-.dashboard .btn-outline-info:hover,
-.dashboard .btn-outline-warning:hover,
-.dashboard .btn-outline-danger:hover {
+.dashboard-container .btn-outline-primary:hover,
+.dashboard-container .btn-outline-success:hover,
+.dashboard-container .btn-outline-info:hover,
+.dashboard-container .btn-outline-warning:hover,
+.dashboard-container .btn-outline-danger:hover {
     color: white;
 }
 
-.dashboard .list-group-item {
+.dashboard-container .list-group-item {
     transition: background-color 0.2s;
+    border-radius: 0;
+    padding: 0.8rem 1rem;
 }
 
-.dashboard .list-group-item:hover {
+.dashboard-container .list-group-item:hover {
     background-color: #f8f9fa;
+}
+
+/* Styles pour les statistiques en haut */
+.stats-summary .card {
+    border-radius: 10px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.stats-summary .card:hover {
+    transform: translateY(-7px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.stats-icon {
+    font-size: 2rem;
+}
+
+.stats-summary h3 {
+    font-size: 2rem;
+    font-weight: 600;
+    margin: 0.5rem 0;
+    line-height: 1;
+}
+
+.stats-summary p {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+/* Styles pour les cartes d'information */
+.card-header {
+    font-weight: 600;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.user-welcome h3 {
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+}
+
+.user-welcome p {
+    font-size: 1.1rem;
+}
+
+/* Amélioration des badges */
+.badge {
+    padding: 0.5em 0.8em;
+    font-weight: 500;
+    border-radius: 20px;
+}
+
+/* Styles pour les contenus vides */
+.text-center.py-4.text-muted {
+    padding: 2rem 0;
+}
+
+.text-center.py-4.text-muted p {
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* Style pour la liste d'activité admin */
+.admin-activity .list-group-item {
+    transition: all 0.2s ease;
+}
+
+.admin-activity .list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+/* Style responsive */
+@media (max-width: 768px) {
+    .stats-summary h3 {
+        font-size: 1.5rem;
+    }
+    
+    .stats-icon {
+        font-size: 1.5rem;
+    }
 }

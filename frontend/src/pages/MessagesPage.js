@@ -372,108 +372,31 @@ const MessagesPage = () => {
     const handleStartNewConversation = async (e) => {
         e.preventDefault();
         
-        // Trouver le contact sélectionné
-        const recipient = contacts.find(c => c.id.toString() === newConversation.recipientId.toString());
-        if (!recipient) return;
-        
-        // Créer un nouveau message
-        const now = new Date();
-        const newMessageObj = {
-            id: Date.now(), // ID temporaire, sera remplacé par l'ID du serveur
-            senderId: user?.id || 0,
-            receiverId: recipient.id,
-            content: newConversation.message.trim(),
-            timestamp: now.toISOString(),
-            read: false,
-            sender: {
-                firstName: user?.firstName || 'Vous',
-                lastName: user?.lastName || '',
-                avatar: user?.avatar || 'https://via.placeholder.com/50'
-            }
-        };
-        
         try {
-            let sentMessage = newMessageObj;
+            const newMessage = {
+                recipientId: newConversation.recipientId,
+                content: newConversation.message,
+                isUrgent: document.getElementById('urgentCheck')?.checked || false
+            };
             
-            // Essayer d'envoyer le message au backend
-            if (user) {
-                try {
-                    // Préparer les données pour l'envoi
-                    const messageData = {
-                        receiverId: recipient.id,
-                        content: newConversation.message.trim(),
-                        urgent: document.getElementById('urgentCheck')?.checked || false
-                    };
-                    
-                    // Adapter l'endpoint en fonction du rôle
-                    let endpoint;
-                    if (user.role === 'DOCTOR') {
-                        endpoint = '/api/v1/doctor/messages';
-                    } else if (user.role === 'PATIENT') {
-                        endpoint = '/api/v1/patient/messages';
-                    } else if (user.role === 'ADMIN') {
-                        endpoint = '/api/v1/admin/messages';
-                    } else if (user.role === 'NURSE') {
-                        endpoint = '/api/v1/nurse/messages';
-                    } else {
-                        throw new Error("Rôle non pris en charge");
-                    }
-                    
-                    const response = await axios.post(endpoint, messageData);
-                    
-                    // Si l'envoi réussit, utiliser les données renvoyées par le serveur
-                    sentMessage = response.data;
-                    console.log("Message envoyé avec succès au serveur:", sentMessage);
-                } catch (err) {
-                    console.error("Erreur lors de l'envoi du message au serveur:", err);
-                    // Continuer avec les données locales
-                }
-            }
+            // Envoyer au backend
+            const response = await axios.post('/api/v1/messages', newMessage);
             
-            // Mettre à jour les messages pour cette conversation dans localStorage
-            const conversationKey = `messages_with_${recipient.id}`;
-            const storedMessages = localStorage.getItem(conversationKey);
-            let updatedMessages = [];
+            // Mettre à jour l'état local
+            const updatedMessages = [...messages, response.data];
+            setMessages(updatedMessages);
             
-            if (storedMessages) {
-                try {
-                    updatedMessages = [...JSON.parse(storedMessages), sentMessage];
-                } catch (e) {
-                    updatedMessages = [sentMessage];
-                }
-            } else {
-                updatedMessages = [sentMessage];
-            }
-            
-            localStorage.setItem(conversationKey, JSON.stringify(updatedMessages));
-            
-            // Mettre à jour les contacts
-            const updatedContacts = contacts.map(c => {
-                if (c.id === recipient.id) {
-                    return {
-                        ...c,
-                        lastMessage: newConversation.message.trim(),
-                        unreadCount: 0
-                    };
-                }
-                return c;
+            // Fermer la modale et réinitialiser le formulaire
+            setShowNewMessageModal(false);
+            setNewConversation({
+                recipientId: '',
+                message: ''
             });
             
-            setContacts(updatedContacts);
-            localStorage.setItem('user_contacts', JSON.stringify(updatedContacts));
-            
-            // Sélectionner ce contact et fermer le modal
-            setSelectedContact(recipient);
-            setNewConversation({ recipientId: '', message: '' });
-            setShowNewMessageModal(false);
-            
-            // Si le contact était déjà sélectionné, mettre à jour les messages
-            if (selectedContact && selectedContact.id === recipient.id) {
-                setMessages(prev => [...prev, sentMessage]);
-            }
-        } catch (err) {
-            console.error("Erreur lors de l'envoi du message:", err);
-            alert("Impossible d'envoyer votre message. Veuillez réessayer plus tard.");
+            alert("Message envoyé avec succès!");
+        } catch (error) {
+            console.error("Erreur lors de l'envoi du message:", error);
+            alert("Erreur lors de l'envoi du message. Veuillez réessayer.");
         }
     };
 
@@ -634,8 +557,76 @@ const MessagesPage = () => {
     };
 
     const formatTime = (timestamp) => {
-        const date = new Date(timestamp);
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        try {
+            if (!timestamp) {
+                return "Date non disponible";
+            }
+            
+            // Si c'est déjà une chaîne formatée, la retourner directement
+            if (typeof timestamp === 'string' && /^\d{2}\/\d{2}\/\d{4}/.test(timestamp)) {
+                return timestamp;
+            }
+            
+            const date = new Date(timestamp);
+            
+            // Vérifier si la date est valide
+            if (isNaN(date.getTime())) {
+                // Essayer différents formats courants
+                // 1. Format avec T et millisecondes: "2023-04-15T14:30:45.123Z"
+                // 2. Format simple: "2023-04-15 14:30:45"
+                // 3. Timestamp numérique
+                
+                let parsedDate;
+                
+                // Essai 1: Conversion de format Java/ISO spécifique
+                if (typeof timestamp === 'string') {
+                    // Nettoyage et normalisation du format
+                    const cleanTimestamp = timestamp.replace(/(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2}).*/, "$1 $2");
+                    parsedDate = new Date(cleanTimestamp);
+                    
+                    if (!isNaN(parsedDate.getTime())) {
+                        return parsedDate.toLocaleString('fr-FR', { 
+                            day: '2-digit', 
+                            month: '2-digit', 
+                            year: 'numeric', 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                        });
+                    }
+                }
+                
+                // Essai 2: Conversion d'un timestamp numérique
+                if (typeof timestamp === 'number' || /^\d+$/.test(timestamp)) {
+                    parsedDate = new Date(parseInt(timestamp));
+                    
+                    if (!isNaN(parsedDate.getTime())) {
+                        return parsedDate.toLocaleString('fr-FR', { 
+                            day: '2-digit', 
+                            month: '2-digit', 
+                            year: 'numeric', 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                        });
+                    }
+                }
+                
+                // Si on arrive ici, aucun format n'a fonctionné
+                console.log("Date non convertible:", timestamp);
+                return "Date non disponible";
+            }
+            
+            // Format date: JJ/MM/AAAA HH:MM
+            return date.toLocaleString('fr-FR', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        } catch (error) {
+            console.error("Erreur lors du formatage de la date:", error, "Valeur:", timestamp);
+            return "Date non disponible";
+        }
     };
 
     // Afficher un spinner pendant le chargement
@@ -819,7 +810,7 @@ const MessagesPage = () => {
                                                             </div>
                                                         )}
                                                         <div className={`message-time small ${isFromMe ? 'text-white-50' : 'text-muted'}`}>
-                                                            {formatTime(message.timestamp)}
+                                                            {formatTime(message.timestamp || message.sentAt)}
                                                         </div>
                                                     </div>
                                                 </div>

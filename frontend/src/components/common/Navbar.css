@@ -1,0 +1,88 @@
+/* Navbar.css - Styles pour la barre de navigation */
+
+.user-dropdown {
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+    position: relative;
+    padding-right: 1.5rem !important;
+}
+
+.user-dropdown::after {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.user-icon {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 24px;
+    height: 24px;
+    background-color: #f0f2f5;
+    border-radius: 50%;
+    margin-right: 8px;
+    color: #4a5568;
+}
+
+.dropdown-menu {
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: none;
+    padding: 0.5rem 0;
+    min-width: 12rem;
+}
+
+/* Styles pour que le menu s'affiche au survol si JS ne fonctionne pas */
+@media (min-width: 992px) {
+    .nav-item.dropdown:hover .dropdown-menu {
+        display: block;
+    }
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+}
+
+.dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+
+.dropdown-item.text-danger:hover {
+    background-color: #fee2e2;
+}
+
+.navbar-nav .nav-link {
+    font-weight: 500;
+    color: #4b5563;
+    padding: 0.5rem 1rem;
+    transition: color 0.2s ease;
+}
+
+.navbar-nav .nav-link:hover {
+    color: #1d4ed8;
+}
+
+.navbar-brand {
+    font-weight: 700;
+    color: #2563eb;
+    font-size: 1.4rem;
+}
+
+/* Classe pour afficher le dropdown manuellement */
+.show {
+    display: block !important;
+}
+
+@media (max-width: 991px) {
+    .dropdown-menu {
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+}

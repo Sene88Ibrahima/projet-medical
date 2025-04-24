@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -35,12 +36,15 @@ public class User implements UserDetails {
     @Enumerated(EnumType.STRING)
     private Role role;
 
+    @ToString.Exclude
     @OneToMany(mappedBy = "patient")
     private List<Appointment> patientAppointments;
 
+    @ToString.Exclude
     @OneToMany(mappedBy = "doctor")
     private List<Appointment> doctorAppointments;
 
+    @ToString.Exclude
     @OneToMany(mappedBy = "patient")
     private List<MedicalRecord> medicalRecords;
 

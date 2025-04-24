@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -21,4 +22,6 @@ public class MedicalRecordDTO {
     private String treatment;
     private LocalDateTime createdAt;
     private String notes;
+    private List<MedicalImageDTO> medicalImages;
+    private int imageCount;
 } 
