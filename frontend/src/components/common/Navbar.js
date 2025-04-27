@@ -1,14 +1,16 @@
 // src/components/common/Navbar.js
-import React, { useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { FaUser, FaCog, FaSignOutAlt, FaUserMd, FaUserCog } from 'react-icons/fa';
+import { FaUser, FaCog, FaSignOutAlt, FaUserMd, FaUserCog, FaUserNurse, FaHome } from 'react-icons/fa';
 import './Navbar.css';
 
 const Navbar = () => {
     const { user, logout, loading } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const dropdownRef = useRef(null);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     
     // Utiliser directement l'état du contexte d'authentification
     const isAuthenticated = !!user;
@@ -56,34 +58,72 @@ const Navbar = () => {
     const handleLogout = () => {
         console.log("Déconnexion initiée depuis Navbar");
         logout();
-        // Utiliser window.location.href pour un rechargement complet après déconnexion
-        window.location.href = '/login';
+        // Rediriger vers la page d'accueil après déconnexion
+        window.location.href = '/';
     };
 
     const handleEditProfile = () => {
         navigate('/profile/edit');
     };
 
+    const toggleMenu = () => {
+        setIsMenuOpen(!isMenuOpen);
+    };
+
+    // Déterminer le lien du tableau de bord en fonction du rôle
+    const getDashboardLink = () => {
+        if (!user) return '/dashboard';
+        
+        switch (user.role) {
+            case 'ADMIN':
+                return '/dashboard/admin';
+            case 'DOCTOR':
+                return '/dashboard/doctor';
+            case 'NURSE':
+                return '/dashboard/nurse';
+            case 'PATIENT':
+                return '/dashboard/patient';
+            default:
+                return '/dashboard';
+        }
+    };
+
+    // Obtenir l'icône correspondant au rôle de l'utilisateur
+    const getUserIcon = () => {
+        if (!user) return <FaUser />;
+        
+        switch (user.role) {
+            case 'ADMIN':
+                return <FaUserCog />;
+            case 'DOCTOR':
+                return <FaUserMd />;
+            case 'NURSE':
+                return <FaUserNurse />;
+            default:
+                return <FaUser />;
+        }
+    };
+
     return (
-        <nav className="navbar navbar-expand-lg navbar-light bg-light">
+        <nav className="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
             <div className="container">
-                <Link className="navbar-brand" to="/">
+                <Link className="navbar-brand d-flex align-items-center" to="/">
+                    <FaHome className="me-2" />
                     MediConnect
                 </Link>
 
                 <button
                     className="navbar-toggler"
                     type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#navbarNav"
+                    onClick={toggleMenu}
                     aria-controls="navbarNav"
-                    aria-expanded="false"
+                    aria-expanded={isMenuOpen ? "true" : "false"}
                     aria-label="Toggle navigation"
                 >
                     <span className="navbar-toggler-icon"></span>
                 </button>
 
-                <div className="collapse navbar-collapse" id="navbarNav">
+                <div className={`collapse navbar-collapse ${isMenuOpen ? 'show' : ''}`} id="navbarNav">
                     <ul className="navbar-nav ms-auto">
                         <li className="nav-item">
                             <Link className="nav-link" to="/">
@@ -94,7 +134,7 @@ const Navbar = () => {
                         {isAuthenticated && user ? (
                             <>
                                 <li className="nav-item">
-                                    <Link className="nav-link" to="/dashboard">
+                                    <Link className="nav-link" to={getDashboardLink()}>
                                         Tableau de bord
                                     </Link>
                                 </li>
@@ -117,6 +157,7 @@ const Navbar = () => {
                                     </Link>
                                 </li>
 
+                                {/* Menu déroulant utilisateur */}
                                 <li className="nav-item dropdown">
                                     <a
                                         className="nav-link dropdown-toggle user-dropdown"
@@ -128,13 +169,7 @@ const Navbar = () => {
                                         ref={dropdownRef}
                                     >
                                         <span className="user-icon me-1">
-                                            {user?.role === 'DOCTOR' ? (
-                                                <FaUserMd />
-                                            ) : user?.role === 'ADMIN' ? (
-                                                <FaUserCog />
-                                            ) : (
-                                                <FaUser />
-                                            )}
+                                            {getUserIcon()}
                                         </span>
                                         {user?.firstName || ''} {user?.lastName || ''}
                                     </a>
@@ -163,16 +198,26 @@ const Navbar = () => {
                                         </li>
                                     </ul>
                                 </li>
+                                
+                                {/* Bouton de déconnexion visible sur les petits écrans */}
+                                <li className="nav-item d-lg-none mt-2">
+                                    <button
+                                        className="btn btn-outline-danger w-100"
+                                        onClick={handleLogout}
+                                    >
+                                        <FaSignOutAlt className="me-2" /> Déconnexion
+                                    </button>
+                                </li>
                             </>
                         ) : (
                             <>
                                 <li className="nav-item">
-                                    <Link className="nav-link" to="/login">
+                                    <Link className={`nav-link ${location.pathname === '/login' ? 'active' : ''}`} to="/login">
                                         Connexion
                                     </Link>
                                 </li>
                                 <li className="nav-item">
-                                    <Link className="nav-link" to="/register">
+                                    <Link className={`nav-link ${location.pathname === '/register' ? 'active' : ''}`} to="/register">
                                         Inscription
                                     </Link>
                                 </li>

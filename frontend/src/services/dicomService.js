@@ -131,6 +131,25 @@ const dicomService = {
   // URL pour accéder directement à l'image via Orthanc
   getInstanceImageUrl: (instanceId) => {
     return `${API_URL}/instances/${instanceId}/image`;
+  },
+
+  // URL pour accéder directement au fichier DICOM brut
+  getInstanceFileUrl: (instanceId) => {
+    return `${API_URL}/instances/${instanceId}/file`;
+  },
+
+  // Récupérer le fichier DICOM brut d'une instance
+  getInstanceFile: async (instanceId) => {
+    try {
+      const response = await axios.get(`${API_URL}/instances/${instanceId}/file`, { 
+        headers: authHeader(),
+        responseType: 'blob'
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Erreur lors de la récupération du fichier DICOM pour l'instance ${instanceId}:`, error);
+      throw error;
+    }
   }
 };
 

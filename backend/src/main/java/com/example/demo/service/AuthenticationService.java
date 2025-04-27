@@ -27,12 +27,13 @@ public class AuthenticationService {
             throw new RuntimeException("Email déjà utilisé");
         }
 
+        // Pour l'inscription publique, seul le rôle PATIENT est autorisé
         var user = User.builder()
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(request.getRole())
+                .role(Role.PATIENT) // Forcer le rôle PATIENT pour l'inscription publique
                 .build();
 
         userRepository.save(user);
@@ -78,10 +79,10 @@ public class AuthenticationService {
 
     private String getDashboardUrlByRole(Role role) {
         return switch (role) {
-            case ADMIN -> "/admin/dashboard";
-            case DOCTOR -> "/doctor/dashboard";
-            case NURSE -> "/nurse/dashboard";
-            case PATIENT -> "/patient/dashboard";
+            case ADMIN -> "/dashboard/admin";
+            case DOCTOR -> "/dashboard/doctor";
+            case NURSE -> "/dashboard/nurse";
+            case PATIENT -> "/dashboard/patient";
         };
     }
 }

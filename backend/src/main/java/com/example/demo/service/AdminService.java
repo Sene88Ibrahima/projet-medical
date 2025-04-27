@@ -10,6 +10,7 @@ import com.example.demo.repository.MedicalImageRepository;
 import com.example.demo.repository.MedicalRecordRepository;
 import com.example.demo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,6 +24,7 @@ public class AdminService {
     private final AppointmentRepository appointmentRepository;
     private final MedicalRecordRepository medicalRecordRepository;
     private final MedicalImageRepository medicalImageRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public List<UserDTO> getAllUsers() {
         return userRepository.findAll().stream()
@@ -72,6 +74,34 @@ public class AdminService {
                 .totalMedicalRecords(medicalRecordRepository.count())
                 .totalMedicalImages(medicalImageRepository.count())
                 .build();
+    }
+
+    /**
+     * Permet à un administrateur de créer un nouvel utilisateur avec un rôle spécifique
+     * Seuls les rôles DOCTOR, NURSE et ADMIN sont autorisés
+     */
+    public UserDTO createUser(UserDTO userDTO, String password) {
+        // Vérifier si l'email existe déjà
+        if (userRepository.existsByEmail(userDTO.getEmail())) {
+            throw new RuntimeException("Email déjà utilisé");
+        }
+        
+        // Vérifier que le rôle est autorisé (pas de création de PATIENT par cette méthode)
+        if (userDTO.getRole() == Role.PATIENT) {
+            throw new RuntimeException("Les patients doivent s'inscrire via l'inscription publique");
+        }
+        
+        // Créer le nouvel utilisateur
+        User user = User.builder()
+                .firstName(userDTO.getFirstName())
+                .lastName(userDTO.getLastName())
+                .email(userDTO.getEmail())
+                .password(passwordEncoder.encode(password))
+                .role(userDTO.getRole())
+                .build();
+        
+        User savedUser = userRepository.save(user);
+        return mapToUserDTO(savedUser);
     }
 
     private UserDTO mapToUserDTO(User user) {

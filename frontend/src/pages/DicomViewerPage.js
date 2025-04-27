@@ -49,29 +49,95 @@ const DicomViewerPage = () => {
     }
   }, [patientId, studyId]);
 
-  // Quand une étude est sélectionnée, mettre à jour l'URL et sélectionner la première série
+  // Quand une étude est sélectionnée, mettre à jour l'URL et charger les séries
   useEffect(() => {
-    if (selectedStudy) {
+    if (!selectedStudy) {
+      return;
+    }
+    
+    // Utiliser l'ID correct (peut être id ou ID)
+    const studyId = selectedStudy.ID || selectedStudy.id;
+    
+    if (studyId) {
       // Mettre à jour l'URL sans recharger la page
-      navigate(`/patients/${patientId}/dicom/${selectedStudy.id}`, { replace: true });
-      
-      // Sélectionner la première série si disponible
-      if (selectedStudy.series && selectedStudy.series.length > 0) {
-        setSelectedSeries(selectedStudy.series[0]);
-      } else {
-        setSelectedSeries(null);
+      if (patientId) {
+        navigate(`/patients/${patientId}/dicom/${studyId}`, { replace: true });
       }
+      
+      // Charger les séries pour cette étude
+      const fetchSeries = async () => {
+        try {
+          console.log("Chargement des séries pour l'étude:", studyId);
+          const seriesData = await dicomService.getStudy(studyId);
+          
+          console.log("Données de l'étude récupérées:", seriesData);
+          
+          if (seriesData && seriesData.Series && seriesData.Series.length > 0) {
+            console.log("Séries récupérées:", seriesData.Series);
+            // Ajouter les séries à l'étude sélectionnée
+            setSelectedStudy(prev => ({
+              ...prev,
+              series: seriesData.Series
+            }));
+            
+            // Sélectionner la première série
+            const firstSeries = seriesData.Series[0];
+            setSelectedSeries(firstSeries);
+          } else {
+            console.log("Aucune série trouvée pour cette étude");
+            setSelectedSeries(null);
+          }
+        } catch (err) {
+          console.error("Erreur lors du chargement des séries:", err);
+          setError("Impossible de charger les séries pour cette étude.");
+        }
+      };
+      
+      fetchSeries();
     }
   }, [selectedStudy, patientId, navigate]);
 
-  // Quand une série est sélectionnée, sélectionner la première instance
+  // Quand une série est sélectionnée, charger les instances
   useEffect(() => {
-    if (selectedSeries) {
-      if (selectedSeries.instances && selectedSeries.instances.length > 0) {
-        setSelectedInstance(selectedSeries.instances[0]);
-      } else {
-        setSelectedInstance(null);
-      }
+    if (!selectedSeries) {
+      return;
+    }
+    
+    // Utiliser l'ID correct (peut être id ou ID)
+    const seriesId = selectedSeries.ID || selectedSeries.id;
+    
+    if (seriesId && !selectedSeries.instances) {
+      const fetchInstances = async () => {
+        try {
+          console.log("Chargement des instances pour la série:", seriesId);
+          const seriesDetails = await dicomService.getSeries(seriesId);
+          
+          console.log("Détails de la série récupérés:", seriesDetails);
+          
+          if (seriesDetails && seriesDetails.Instances && seriesDetails.Instances.length > 0) {
+            console.log("Instances récupérées:", seriesDetails.Instances);
+            // Ajouter les instances à la série sélectionnée
+            setSelectedSeries(prev => ({
+              ...prev,
+              instances: seriesDetails.Instances
+            }));
+            
+            // Sélectionner la première instance
+            setSelectedInstance(seriesDetails.Instances[0]);
+          } else {
+            console.log("Aucune instance trouvée pour cette série");
+            setSelectedInstance(null);
+          }
+        } catch (err) {
+          console.error("Erreur lors du chargement des instances:", err);
+        }
+      };
+      
+      fetchInstances();
+    } else if (selectedSeries.instances && selectedSeries.instances.length > 0) {
+      setSelectedInstance(selectedSeries.instances[0]);
+    } else {
+      setSelectedInstance(null);
     }
   }, [selectedSeries]);
 
@@ -134,50 +200,50 @@ const DicomViewerPage = () => {
               <p>Aucune étude disponible pour ce patient.</p>
             ) : (
               <ul className="studies-list">
-                {studies.map(study => (
+                {studies.map((study, studyIndex) => (
                   <li 
-                    key={study.id}
-                    className={selectedStudy && selectedStudy.id === study.id ? 'selected' : ''}
+                    key={study.ID || study.id || `study-${studyIndex}`}
+                    className={selectedStudy && (selectedStudy.ID === study.ID || selectedStudy.id === study.id) ? 'selected' : ''}
                     onClick={() => handleStudySelect(study)}
                   >
                     <div className="study-item">
-                      <strong>{study.description || 'Étude sans description'}</strong>
+                      <strong>{study.PatientName || study.MainDicomTags?.PatientName || 'Étude sans description'}</strong>
                       <span className="study-date">
-                        {new Date(study.date).toLocaleDateString()}
+                        {study.MainDicomTags?.StudyDate || 'Invalid Date'}
                       </span>
-                      <span className="study-modality">{study.modality}</span>
+                      <span className="study-modality">{study.MainDicomTags?.Modality || ''}</span>
                     </div>
                     
-                    {selectedStudy && selectedStudy.id === study.id && study.series && (
+                    {selectedStudy && (selectedStudy.ID === study.ID || selectedStudy.id === study.id) && selectedStudy.series && (
                       <ul className="series-list">
-                        {study.series.map(series => (
+                        {selectedStudy.series.map((series, seriesIndex) => (
                           <li 
-                            key={series.id}
-                            className={selectedSeries && selectedSeries.id === series.id ? 'selected' : ''}
+                            key={series.ID || series.id || `series-${seriesIndex}`}
+                            className={selectedSeries && (selectedSeries.ID === series.ID || selectedSeries.id === series.id) ? 'selected' : ''}
                             onClick={(e) => {
                               e.stopPropagation();
                               handleSeriesSelect(series);
                             }}
                           >
                             <div className="series-item">
-                              {series.description || `Série ${series.number || 'sans numéro'}`}
+                              {series.MainDicomTags?.SeriesDescription || `Série ${series.MainDicomTags?.SeriesNumber || 'sans numéro'}`}
                               <span className="series-count">
                                 {series.instances ? series.instances.length : 0} images
                               </span>
                             </div>
                             
-                            {selectedSeries && selectedSeries.id === series.id && series.instances && (
+                            {selectedSeries && (selectedSeries.ID === series.ID || selectedSeries.id === series.id) && selectedSeries.instances && (
                               <ul className="instances-list">
-                                {series.instances.map(instance => (
+                                {selectedSeries.instances.map((instance, instanceIndex) => (
                                   <li 
-                                    key={instance.id}
-                                    className={selectedInstance && selectedInstance.id === instance.id ? 'selected' : ''}
+                                    key={instance.ID || instance.id || `instance-${instanceIndex}`}
+                                    className={selectedInstance && (selectedInstance.ID === instance.ID || selectedInstance.id === instance.id) ? 'selected' : ''}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleInstanceSelect(instance);
                                     }}
                                   >
-                                    Image {instance.number || 'sans numéro'}
+                                    Image {instance.MainDicomTags?.InstanceNumber || 'sans numéro'}
                                   </li>
                                 ))}
                               </ul>

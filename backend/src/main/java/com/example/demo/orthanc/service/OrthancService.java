@@ -26,28 +26,50 @@ public class OrthancService {
 
     public OrthancResponse uploadDicomFile(MultipartFile file) {
         try {
+            log.info("Début du téléversement du fichier DICOM: {}", file.getOriginalFilename());
             byte[] content = file.getBytes();
             
             HttpHeaders headers = createHeaders();
             headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            
+            log.info("En-têtes de la requête: {}", headers);
+            log.info("URL de l'API Orthanc: {}", orthancProperties.getApi().getUrl() + "/instances");
 
             HttpEntity<byte[]> requestEntity = new HttpEntity<>(content, headers);
-            ResponseEntity<OrthancResponse> response = restTemplate.exchange(
-                orthancProperties.getApi().getUrl() + "/instances",
-                HttpMethod.POST,
-                requestEntity,
-                OrthancResponse.class
-            );
-
-            // Audit de l'upload
-            auditService.logAccess(
-                SecurityContextHolder.getContext().getAuthentication().getName(),
-                response.getBody().getId(),
-                "UPLOAD",
-                "SUCCESS"
-            );
-
-            return response.getBody();
+            
+            try {
+                ResponseEntity<OrthancResponse> response = restTemplate.exchange(
+                    orthancProperties.getApi().getUrl() + "/instances",
+                    HttpMethod.POST,
+                    requestEntity,
+                    OrthancResponse.class
+                );
+                
+                // Afficher la structure de la réponse
+                log.info("Réponse d'Orthanc pour l'upload: {}", response.getBody());
+                log.info("Code de statut HTTP: {}", response.getStatusCode());
+                
+                if (response.getBody() != null) {
+                    log.info("ID de l'instance: {}", response.getBody().getId());
+                    
+                    // Audit de l'upload
+                    auditService.logAccess(
+                        SecurityContextHolder.getContext().getAuthentication().getName(),
+                        response.getBody().getId(),
+                        "UPLOAD",
+                        "SUCCESS"
+                    );
+                    
+                    return response.getBody();
+                } else {
+                    log.error("La réponse d'Orthanc est vide");
+                    throw new RuntimeException("La réponse d'Orthanc est vide");
+                }
+            } catch (Exception e) {
+                log.error("Erreur lors de l'appel à l'API Orthanc: {}", e.getMessage());
+                e.printStackTrace();
+                throw e;
+            }
         } catch (Exception e) {
             // Audit de l'échec
             auditService.logAccess(
@@ -61,28 +83,64 @@ public class OrthancService {
         }
     }
 
-    public List<DicomStudyDTO> getAllStudies(String patientId) {
+    public List<DicomStudyDTO> getStudies() {
         try {
             HttpHeaders headers = createHeaders();
             HttpEntity<?> requestEntity = new HttpEntity<>(headers);
             String url = orthancProperties.getApi().getUrl() + "/studies";
             
-            if (patientId != null && !patientId.isEmpty()) {
-                url += "?patientId=" + patientId;
+            log.info("Récupération des études depuis Orthanc: {}", url);
+            System.out.println("URL Orthanc: " + url);
+            System.out.println("En-têtes: " + headers);
+
+            try {
+                ResponseEntity<List<String>> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    requestEntity,
+                    new ParameterizedTypeReference<List<String>>() {}
+                );
+                
+                List<String> studyIds = response.getBody();
+                System.out.println("Réponse d'Orthanc - Status: " + response.getStatusCode());
+                System.out.println("Réponse d'Orthanc - Ids d'études: " + studyIds);
+                
+                List<DicomStudyDTO> studies = new ArrayList<>();
+                
+                if (studyIds != null) {
+                    for (String studyId : studyIds) {
+                        try {
+                            System.out.println("Récupération des détails de l'étude: " + studyId);
+                            DicomStudyDTO study = getStudy(studyId);
+                            if (study != null) {
+                                studies.add(study);
+                            }
+                        } catch (Exception e) {
+                            log.error("Erreur lors de la récupération des détails de l'étude {}: {}", studyId, e.getMessage());
+                            System.err.println("Erreur pour l'étude " + studyId + ": " + e.getMessage());
+                        }
+                    }
+                }
+                
+                System.out.println("Nombre total d'études récupérées: " + studies.size());
+                return studies;
+            } catch (Exception e) {
+                log.error("Erreur lors de l'appel à Orthanc: {}", e.getMessage());
+                System.err.println("Erreur lors de l'appel à Orthanc: " + e.getMessage());
+                e.printStackTrace();
+                throw e;
             }
-
-            ResponseEntity<List<DicomStudyDTO>> response = restTemplate.exchange(
-                url,
-                HttpMethod.GET,
-                requestEntity,
-                new ParameterizedTypeReference<List<DicomStudyDTO>>() {}
-            );
-
-            return response.getBody();
         } catch (Exception e) {
-            log.error("Error getting studies", e);
-            throw new RuntimeException("Failed to get studies", e);
+            log.error("Erreur lors de la récupération des études", e);
+            System.err.println("Exception générale: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Échec de la récupération des études", e);
         }
+    }
+
+    public List<DicomStudyDTO> getAllStudies(String patientId) {
+        // Méthode maintenue pour compatibilité
+        return getStudies();
     }
 
     public DicomStudyDTO getStudy(String studyId) {
@@ -185,6 +243,74 @@ public class OrthancService {
         }
     }
 
+    public byte[] getInstancePreview(String instanceId) {
+        try {
+            HttpHeaders headers = createHeaders();
+            HttpEntity<?> requestEntity = new HttpEntity<>(headers);
+
+            ResponseEntity<byte[]> response = restTemplate.exchange(
+                orthancProperties.getApi().getUrl() + "/instances/" + instanceId + "/preview",
+                HttpMethod.GET,
+                requestEntity,
+                byte[].class
+            );
+
+            // Audit de l'accès
+            auditService.logAccess(
+                SecurityContextHolder.getContext().getAuthentication().getName(),
+                instanceId,
+                "VIEW_PREVIEW",
+                "SUCCESS"
+            );
+
+            return response.getBody();
+        } catch (Exception e) {
+            // Audit de l'échec
+            auditService.logAccess(
+                SecurityContextHolder.getContext().getAuthentication().getName(),
+                instanceId,
+                "VIEW_PREVIEW",
+                "FAILURE: " + e.getMessage()
+            );
+            log.error("Error getting instance preview: {}", instanceId, e);
+            throw new RuntimeException("Failed to get instance preview", e);
+        }
+    }
+
+    public byte[] getInstanceImage(String instanceId) {
+        try {
+            HttpHeaders headers = createHeaders();
+            HttpEntity<?> requestEntity = new HttpEntity<>(headers);
+
+            ResponseEntity<byte[]> response = restTemplate.exchange(
+                orthancProperties.getApi().getUrl() + "/instances/" + instanceId + "/rendered",
+                HttpMethod.GET,
+                requestEntity,
+                byte[].class
+            );
+
+            // Audit de l'accès
+            auditService.logAccess(
+                SecurityContextHolder.getContext().getAuthentication().getName(),
+                instanceId,
+                "VIEW_IMAGE",
+                "SUCCESS"
+            );
+
+            return response.getBody();
+        } catch (Exception e) {
+            // Audit de l'échec
+            auditService.logAccess(
+                SecurityContextHolder.getContext().getAuthentication().getName(),
+                instanceId,
+                "VIEW_IMAGE",
+                "FAILURE: " + e.getMessage()
+            );
+            log.error("Erreur lors de la récupération de l'image de l'instance: {}", instanceId, e);
+            throw new RuntimeException("Échec de la récupération de l'image de l'instance", e);
+        }
+    }
+
     public OrthancResponse modifyInstance(String instanceId, ModifyInstanceRequest request) {
         try {
             HttpHeaders headers = createHeaders();
@@ -207,6 +333,81 @@ public class OrthancService {
         } catch (Exception e) {
             log.error("Error modifying instance: {}", instanceId, e);
             throw new RuntimeException("Failed to modify instance", e);
+        }
+    }
+
+    public Map<String, Object> anonymizeStudy(String studyId, String keepTagsString) {
+        List<String> keepTags = new ArrayList<>();
+        if (keepTagsString != null && !keepTagsString.isEmpty()) {
+            keepTags = Arrays.asList(keepTagsString.split(","));
+        }
+        
+        try {
+            HttpHeaders headers = createHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("Force", true);
+            if (keepTags != null && !keepTags.isEmpty()) {
+                requestBody.put("Keep", keepTags);
+            }
+
+            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                orthancProperties.getApi().getUrl() + "/studies/" + studyId + "/anonymize",
+                HttpMethod.POST,
+                requestEntity,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
+            );
+
+            return response.getBody();
+        } catch (Exception e) {
+            log.error("Error anonymizing study: {}", studyId, e);
+            throw new RuntimeException("Failed to anonymize study", e);
+        }
+    }
+
+    /**
+     * Récupère le fichier DICOM brut d'une instance
+     * @param instanceId ID de l'instance
+     * @return Contenu du fichier DICOM
+     */
+    public byte[] getInstanceDicomFile(String instanceId) {
+        try {
+            HttpHeaders headers = createHeaders();
+            HttpEntity<?> requestEntity = new HttpEntity<>(headers);
+
+            log.info("Récupération du fichier DICOM pour l'instance: {}", instanceId);
+            
+            ResponseEntity<byte[]> response = restTemplate.exchange(
+                orthancProperties.getApi().getUrl() + "/instances/" + instanceId + "/file",
+                HttpMethod.GET,
+                requestEntity,
+                byte[].class
+            );
+
+            // Audit de l'accès
+            auditService.logAccess(
+                SecurityContextHolder.getContext().getAuthentication().getName(),
+                instanceId,
+                "DOWNLOAD_DICOM",
+                "SUCCESS"
+            );
+
+            log.info("Fichier DICOM récupéré avec succès, taille: {} octets", 
+                    response.getBody() != null ? response.getBody().length : 0);
+            
+            return response.getBody();
+        } catch (Exception e) {
+            // Audit de l'échec
+            auditService.logAccess(
+                SecurityContextHolder.getContext().getAuthentication().getName(),
+                instanceId,
+                "DOWNLOAD_DICOM",
+                "FAILURE: " + e.getMessage()
+            );
+            log.error("Erreur lors de la récupération du fichier DICOM: {}", instanceId, e);
+            throw new RuntimeException("Échec de la récupération du fichier DICOM", e);
         }
     }
 

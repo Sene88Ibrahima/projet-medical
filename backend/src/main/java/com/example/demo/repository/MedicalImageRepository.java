@@ -11,5 +11,6 @@ import java.util.Optional;
 @Repository
 public interface MedicalImageRepository extends JpaRepository<MedicalImage, Long> {
     List<MedicalImage> findByMedicalRecord(MedicalRecord medicalRecord);
+    List<MedicalImage> findByMedicalRecord_Id(Long medicalRecordId);
     Optional<MedicalImage> findByOrthancInstanceId(String orthancInstanceId);
 }

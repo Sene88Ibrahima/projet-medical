@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.dto.AdminDashboardStats;
+import com.example.demo.dto.CreateUserRequest;
 import com.example.demo.dto.UserDTO;
 import com.example.demo.model.Role;
 import com.example.demo.model.User;
@@ -44,6 +45,17 @@ public class AdminController {
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         adminService.deleteUser(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/users")
+    public ResponseEntity<UserDTO> createUser(@RequestBody CreateUserRequest request) {
+        UserDTO userDTO = UserDTO.builder()
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .email(request.getEmail())
+                .role(request.getRole())
+                .build();
+        return ResponseEntity.ok(adminService.createUser(userDTO, request.getPassword()));
     }
 
     @GetMapping("/stats")

@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class MedicalImageDTO {
     private Long id;
+    private Long medicalRecordId;
     private String orthancInstanceId;
     private String imageType;
     private String description;

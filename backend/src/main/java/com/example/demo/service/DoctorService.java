@@ -200,8 +200,10 @@ public class DoctorService {
             
             // Associer les images DICOM au dossier médical
             if (medicalRecordDTO.getMedicalImages() != null) {
+                System.out.println("Traitement de " + medicalRecordDTO.getMedicalImages().size() + " images DICOM");
                 for (MedicalImageDTO imageDTO : medicalRecordDTO.getMedicalImages()) {
                     if (imageDTO.getOrthancInstanceId() != null) {
+                        System.out.println("Association de l'image DICOM avec ID Orthanc: " + imageDTO.getOrthancInstanceId());
                         MedicalImage medicalImage = MedicalImage.builder()
                                 .medicalRecord(savedMedicalRecord)
                                 .orthancInstanceId(imageDTO.getOrthancInstanceId())
@@ -210,9 +212,18 @@ public class DoctorService {
                                 .uploadedAt(LocalDateTime.now())
                                 .build();
                         
-                        medicalImageRepository.save(medicalImage);
+                        MedicalImage savedImage = medicalImageRepository.save(medicalImage);
+                        System.out.println("Image médicale enregistrée avec ID: " + savedImage.getId());
+                        
+                        // Ajouter l'image à la liste des images du dossier médical
+                        savedMedicalRecord.getMedicalImages().add(savedImage);
+                    } else {
+                        System.err.println("Erreur: ID Orthanc manquant pour une image");
                     }
                 }
+                // Mettre à jour le dossier médical avec les images associées
+                savedMedicalRecord = medicalRecordRepository.save(savedMedicalRecord);
+                System.out.println("Dossier médical mis à jour avec " + savedMedicalRecord.getMedicalImages().size() + " images");
             }
             
             return mapToMedicalRecordDTO(savedMedicalRecord);

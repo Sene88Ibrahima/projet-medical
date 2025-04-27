@@ -127,18 +127,25 @@ const MedicalRecordsPage = () => {
                     formData.append('file', file);
                     formData.append('patientId', newRecord.patientId);
                     
-                    const uploadResponse = await axios.post('/api/v1/doctor/dicom/upload', formData, {
+                    const uploadResponse = await axios.post('/api/v1/dicom/upload', formData, {
                         headers: {
                             'Content-Type': 'multipart/form-data'
                         }
                     });
                     console.log("Réponse du téléversement:", uploadResponse.data);
+                    console.log("Structure complète de la réponse:", JSON.stringify(uploadResponse.data));
                     
-                    uploadedImages.push({
-                        orthancInstanceId: uploadResponse.data.id,
-                        imageType: file.type,
-                        description: file.name
-                    });
+                    // Vérifier que la réponse contient un ID valide (accepter à la fois ID et id)
+                    const instanceId = uploadResponse.data.ID || uploadResponse.data.id;
+                    if (instanceId) {
+                        uploadedImages.push({
+                            orthancInstanceId: instanceId,
+                            imageType: file.type || 'application/dicom',
+                            description: file.name
+                        });
+                    } else {
+                        console.error("Erreur: ID d'instance manquant dans la réponse", uploadResponse.data);
+                    }
                 }
                 console.log("Fin du téléversement des fichiers DICOM");
             }

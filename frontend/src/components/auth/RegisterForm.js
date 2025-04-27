@@ -9,7 +9,7 @@ const RegisterForm = () => {
         email: '',
         password: '',
         confirmPassword: '',
-        role: 'PATIENT'
+        role: 'PATIENT' // Le rôle est fixé à PATIENT et n'est plus modifiable
     });
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -141,19 +141,9 @@ const RegisterForm = () => {
                     />
                 </div>
 
-                <div className="form-group mb-3">
-                    <label htmlFor="role">Rôle</label>
-                    <select
-                        id="role"
-                        name="role"
-                        value={formData.role}
-                        onChange={handleChange}
-                        className="form-control"
-                    >
-                        <option value="PATIENT">Patient</option>
-                        <option value="DOCTOR">Médecin</option>
-                        <option value="ADMIN">Administrateur</option>
-                    </select>
+                {/* Le sélecteur de rôle a été supprimé car seuls les patients peuvent s'inscrire librement */}
+                <div className="alert alert-info mb-3">
+                    Vous vous inscrivez en tant que patient. Les comptes médecin, infirmier et administrateur sont créés uniquement par l'administration.
                 </div>
 
                 <button 

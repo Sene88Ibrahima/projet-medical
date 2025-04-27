@@ -63,9 +63,6 @@ class OrthancServiceTest {
         when(orthancApi.getUsername()).thenReturn("orthanc");
         when(orthancApi.getPassword()).thenReturn("orthanc");
 
-        // Mock encryption service
-        when(encryptionService.encryptDicomFile(any())).thenReturn("encrypted data".getBytes());
-        
         // Mock RestTemplate response
         OrthancResponse mockResponse = new OrthancResponse();
         mockResponse.setId("test-id");
