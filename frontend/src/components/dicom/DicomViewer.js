@@ -1,71 +1,77 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { 
+  Box, 
+  CircularProgress, 
+  Typography, 
+  Button, 
+  ButtonGroup, 
+  Slider, 
+  Paper, 
+  Card, 
+  CardContent,
+  Grid,
+  Alert,
+  IconButton,
+  Tooltip
+} from '@mui/material';
+import ZoomInIcon from '@mui/icons-material/ZoomIn';
+import ZoomOutIcon from '@mui/icons-material/ZoomOut';
+import RotateLeftIcon from '@mui/icons-material/RotateLeft';
+import RotateRightIcon from '@mui/icons-material/RotateRight';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import DownloadIcon from '@mui/icons-material/Download';
+import InfoIcon from '@mui/icons-material/Info';
 import dicomService from '../../services/dicomService';
 import './DicomViewer.css';
-import * as cornerstone from 'cornerstone-core';
-import * as cornerstoneMath from 'cornerstone-math';
-import * as cornerstoneTools from 'cornerstone-tools';
-import cornerstoneWADOImageLoader from 'cornerstone-wado-image-loader';
-
-// Configuration de Cornerstone
-cornerstoneTools.external.cornerstone = cornerstone;
-cornerstoneTools.external.cornerstoneMath = cornerstoneMath;
-cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
-
-// Configuration de l'adaptateur d'image WADO
-cornerstoneWADOImageLoader.configure({
-  beforeSend: function(xhr) {
-    const token = localStorage.getItem('token');
-    if (token) {
-      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-    }
-  }
-});
-
-// Configuration du chargement des images
-cornerstoneWADOImageLoader.webWorkerManager.initialize({
-  maxWebWorkers: navigator.hardwareConcurrency || 1,
-  startWebWorkersOnDemand: true,
-});
 
 const DicomViewer = ({ instanceId, onAnnotationChange }) => {
   const viewerRef = useRef(null);
   const [loading, setLoading] = useState(true);
-  const [instance, setInstance] = useState(null);
   const [error, setError] = useState(null);
-  const [viewportState, setViewportState] = useState({
-    scale: 1,
-    translation: { x: 0, y: 0 },
-    voi: { windowWidth: 400, windowCenter: 40 },
-    rotation: 0,
-    hflip: false,
-    vflip: false
-  });
-
-  // Initialiser Cornerstone lors du montage du composant
-  useEffect(() => {
-    if (viewerRef.current) {
-      cornerstone.enable(viewerRef.current);
-      
-      // Initialiser les outils de Cornerstone
-      cornerstoneTools.init();
-      
-      // Ajouter les outils nécessaires
-      cornerstoneTools.addTool(cornerstoneTools.ZoomTool);
-      cornerstoneTools.addTool(cornerstoneTools.PanTool);
-      cornerstoneTools.addTool(cornerstoneTools.WwwcTool);
-      cornerstoneTools.addTool(cornerstoneTools.LengthTool);
-      cornerstoneTools.addTool(cornerstoneTools.AngleTool);
-      cornerstoneTools.addTool(cornerstoneTools.RectangleRoiTool);
-      cornerstoneTools.addTool(cornerstoneTools.EllipticalRoiTool);
-    }
-
-    return () => {
-      // Nettoyage lors du démontage du composant
-      if (viewerRef.current) {
-        cornerstone.disable(viewerRef.current);
-      }
-    };
-  }, []);
+  const [instance, setInstance] = useState(null);
+  const [debugInfo, setDebugInfo] = useState({});
+  const [showDebug, setShowDebug] = useState(false);
+  
+  // États pour les manipulations d'image
+  const [zoom, setZoom] = useState(100);
+  const [rotation, setRotation] = useState(0);
+  
+  // Fonctions de manipulation d'image
+  const handleZoomIn = () => {
+    setZoom(prev => Math.min(prev + 10, 200));
+  };
+  
+  const handleZoomOut = () => {
+    setZoom(prev => Math.max(prev - 10, 50));
+  };
+  
+  const handleRotateLeft = () => {
+    setRotation(prev => prev - 90);
+  };
+  
+  const handleRotateRight = () => {
+    setRotation(prev => prev + 90);
+  };
+  
+  const handleReset = () => {
+    setZoom(100);
+    setRotation(0);
+  };
+  
+  const handleDownload = () => {
+    if (!instanceId) return;
+    
+    const actualInstanceId = typeof instanceId === 'object' ? (instanceId.ID || instanceId.id) : instanceId;
+    const downloadUrl = `${window.location.origin}/api/v1/dicom/instances/${actualInstanceId}/file`;
+    
+    // Créer un lien temporaire et déclencher le téléchargement
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = `dicom_image_${actualInstanceId}.dcm`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
 
   // Charger et afficher l'image lorsque instanceId change
   useEffect(() => {
@@ -79,227 +85,284 @@ const DicomViewer = ({ instanceId, onAnnotationChange }) => {
         setLoading(true);
         setError(null);
         
-        // Utiliser l'ID correct de l'instance (peut être instanceId ou instance.ID)
+        // Utiliser l'ID correct de l'instance
         const actualInstanceId = typeof instanceId === 'object' ? (instanceId.ID || instanceId.id) : instanceId;
         
         console.log("Chargement de l'image pour l'instance:", actualInstanceId);
         
-        // Essayer de charger l'image avec l'URL DICOM directe
+        // URL directe de l'image JPEG
+        const imageUrl = `${window.location.origin}/api/v1/dicom/instances/${actualInstanceId}/image`;
+        console.log("URL de l'image:", imageUrl);
+        
+        // URL alternative pour le fichier DICOM brut
+        const fileUrl = `${window.location.origin}/api/v1/dicom/instances/${actualInstanceId}/file`;
+        console.log("URL du fichier DICOM:", fileUrl);
+        
+        // URL de prévisualisation
+        const previewUrl = `${window.location.origin}/api/v1/dicom/instances/${actualInstanceId}/preview`;
+        console.log("URL de prévisualisation:", previewUrl);
+        
+        // Mettre à jour les informations de débogage
+        setDebugInfo({
+          instanceId: actualInstanceId,
+          imageUrl: imageUrl,
+          fileUrl: fileUrl,
+          previewUrl: previewUrl,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Fonction pour charger l'image
+        const loadImage = (url) => {
+          return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            
+            img.onload = function() {
+              console.log(`Image chargée avec succès depuis ${url}, dimensions:`, img.width, "x", img.height);
+              resolve(img);
+            };
+            
+            img.onerror = function(err) {
+              console.error(`Erreur lors du chargement de l'image depuis ${url}:`, err);
+              reject(err);
+            };
+            
+            img.src = url;
+          });
+        };
+        
+        // Utiliser le service DICOM pour récupérer l'image
         try {
-          // Configurer le loader WADO pour utiliser notre token JWT
-          const token = localStorage.getItem('token');
-          cornerstoneWADOImageLoader.configure({
-            beforeSend: function(xhr) {
-              if (token) {
-                xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-              }
-            }
-          });
+          console.log("Utilisation du service DICOM pour récupérer l'image...");
+          const imageObjectUrl = await dicomService.getInstanceImage(actualInstanceId);
           
-          // Définir un gestionnaire d'erreur pour le chargement des images
-          cornerstone.events.addEventListener('cornerstoneimageloadfailed', function(event) {
-            console.error('Image load failed:', event);
-          });
+          // Charger l'image à partir de l'URL de l'objet
+          const img = await loadImage(imageObjectUrl);
           
-          // Créer une URL pour l'image
-          const wadoUrl = dicomService.getInstanceFileUrl(actualInstanceId);
-          console.log("URL WADO pour l'image DICOM:", wadoUrl);
+          // Afficher l'image dans le conteneur
+          const container = viewerRef.current;
+          if (container) {
+            container.innerHTML = '';
+            
+            // Appliquer le zoom et la rotation
+            img.style.maxWidth = '100%';
+            img.style.maxHeight = '100%';
+            img.style.transform = `scale(${zoom / 100}) rotate(${rotation}deg)`;
+            img.style.transition = 'transform 0.3s ease';
+            
+            container.appendChild(img);
+            setInstance({ width: img.width, height: img.height });
+            setLoading(false);
+          }
+        } catch (serviceError) {
+          console.error("Erreur avec le service DICOM:", serviceError);
           
-          // Essayer de charger l'image directement (sans wadouri:)
-          const image = await cornerstone.loadImage(wadoUrl);
-          console.log("Image chargée avec succès:", image);
-          
-          cornerstone.displayImage(viewerRef.current, image);
-          
-          // Activer l'outil de zoom par défaut
-          cornerstoneTools.setToolActive('Zoom', { mouseButtonMask: 1 });
-          
-          setInstance({ id: actualInstanceId });
-        } catch (loadError) {
-          console.error("Erreur lors du chargement direct de l'image:", loadError);
-          
-          // Essayer avec l'URL d'image standard comme fallback
+          // Méthode de secours: essayer de charger directement l'image
           try {
-            const imageUrl = dicomService.getInstanceImageUrl(actualInstanceId);
-            console.log("Tentative avec l'URL d'image standard:", imageUrl);
-            const image = await cornerstone.loadImage(imageUrl);
-            cornerstone.displayImage(viewerRef.current, image);
-            setInstance({ id: actualInstanceId });
-          } catch (imageError) {
-            console.error("Erreur avec l'URL d'image standard:", imageError);
-            throw imageError;
+            console.log("Tentative de chargement direct de l'image JPEG...");
+            
+            const img = await loadImage(imageUrl);
+            
+            // Afficher l'image dans le conteneur
+            const container = viewerRef.current;
+            container.innerHTML = '';
+            
+            // Appliquer le zoom et la rotation
+            img.style.maxWidth = '100%';
+            img.style.maxHeight = '100%';
+            img.style.transform = `scale(${zoom / 100}) rotate(${rotation}deg)`;
+            img.style.transition = 'transform 0.3s ease';
+            
+            container.appendChild(img);
+            setInstance({ width: img.width, height: img.height });
+            setLoading(false);
+          } catch (directError) {
+            console.error("Échec du chargement direct de l'image:", directError);
+            
+            // Dernière tentative: essayer la prévisualisation
+            try {
+              console.log("Tentative de chargement de la prévisualisation...");
+              const img = await loadImage(previewUrl);
+              
+              // Afficher l'image dans le conteneur
+              const container = viewerRef.current;
+              container.innerHTML = '';
+              
+              // Appliquer le zoom et la rotation
+              img.style.maxWidth = '100%';
+              img.style.maxHeight = '100%';
+              img.style.transform = `scale(${zoom / 100}) rotate(${rotation}deg)`;
+              img.style.transition = 'transform 0.3s ease';
+              
+              container.appendChild(img);
+              setInstance({ width: img.width, height: img.height });
+              setLoading(false);
+            } catch (previewError) {
+              console.error("Échec du chargement de la prévisualisation:", previewError);
+              throw new Error("Impossible de charger l'image DICOM. Essayez un autre format ou vérifiez l'ID de l'instance.");
+            }
           }
         }
-      } catch (err) {
-        console.error("Erreur lors du chargement de l'image DICOM:", err);
-        setError("Impossible de charger l'image. Veuillez réessayer ultérieurement.");
-      } finally {
+      } catch (error) {
+        console.error("Erreur lors du chargement de l'image:", error);
+        setError(`Erreur: ${error.message}`);
         setLoading(false);
       }
     };
-
+    
     loadAndDisplayImage();
-  }, [instanceId]);
-
-  // Fonctions de manipulation d'image
-  const handleZoom = (factor) => {
-    if (!viewerRef.current) return;
-    
-    const viewport = cornerstone.getViewport(viewerRef.current);
-    viewport.scale *= factor;
-    cornerstone.setViewport(viewerRef.current, viewport);
-    
-    setViewportState(prev => ({
-      ...prev,
-      scale: viewport.scale
-    }));
-  };
-
-  const handleRotation = (angle) => {
-    if (!viewerRef.current) return;
-    
-    const viewport = cornerstone.getViewport(viewerRef.current);
-    viewport.rotation += angle;
-    cornerstone.setViewport(viewerRef.current, viewport);
-    
-    setViewportState(prev => ({
-      ...prev,
-      rotation: viewport.rotation
-    }));
-  };
-
-  const handleWindowLevel = (width, center) => {
-    if (!viewerRef.current) return;
-    
-    const viewport = cornerstone.getViewport(viewerRef.current);
-    viewport.voi.windowWidth = width;
-    viewport.voi.windowCenter = center;
-    cornerstone.setViewport(viewerRef.current, viewport);
-    
-    setViewportState(prev => ({
-      ...prev,
-      voi: { windowWidth: width, windowCenter: center }
-    }));
-  };
-
-  const activateTool = (toolName) => {
-    cornerstoneTools.setToolActive(toolName, { mouseButtonMask: 1 });
-  };
-
-  // Fonction pour capturer les annotations
-  const captureAnnotation = () => {
-    if (!viewerRef.current || !instanceId) return;
-    
-    // Récupérer les annotations actuelles
-    const toolState = cornerstoneTools.getToolState(viewerRef.current);
-    
-    // Créer un objet d'annotation
-    const annotation = {
-      instanceId,
-      toolState: JSON.stringify(toolState),
-      timestamp: new Date().toISOString()
-    };
-    
-    // Notifier le composant parent
-    if (onAnnotationChange) {
-      onAnnotationChange(annotation);
+  }, [instanceId, zoom, rotation]);
+  
+  // Appliquer les transformations à l'image quand zoom ou rotation changent
+  useEffect(() => {
+    if (instance && instance.width && viewerRef.current) {
+      const img = viewerRef.current.querySelector('img');
+      if (img) {
+        img.style.transform = `scale(${zoom / 100}) rotate(${rotation}deg)`;
+      }
     }
-  };
+  }, [zoom, rotation, instance]);
 
   return (
-    <div className="dicom-viewer">
-      {loading ? (
-        <div className="dicom-loading">
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Chargement de l'image...</span>
-          </div>
-        </div>
-      ) : error ? (
-        <div className="dicom-error">{error}</div>
-      ) : !instance ? (
-        <div className="dicom-placeholder">
-          <p>Sélectionnez une image à visualiser</p>
-        </div>
-      ) : (
-        <div className="dicom-container">
-          {/* Zone de visualisation DICOM */}
-          <div 
-            ref={viewerRef} 
-            className="dicom-image-container"
-            style={{ width: '100%', height: '500px' }}
-          />
-
-          {/* Contrôles */}
-          <div className="dicom-controls mt-3">
-            <div className="btn-toolbar" role="toolbar">
-              <div className="btn-group me-2" role="group">
-                <button className="btn btn-outline-primary" onClick={() => handleZoom(1.1)}>
-                  <i className="fas fa-search-plus"></i> Zoom +
-                </button>
-                <button className="btn btn-outline-primary" onClick={() => handleZoom(0.9)}>
-                  <i className="fas fa-search-minus"></i> Zoom -
-                </button>
-              </div>
+    <Card elevation={3} sx={{ width: '100%', mb: 3, overflow: 'visible' }}>
+      <CardContent>
+        <Typography variant="h6" gutterBottom sx={{ borderBottom: '1px solid #eee', pb: 1, mb: 2 }}>
+          Visualiseur d'images médicales DICOM
+          <Tooltip title="Afficher/masquer les informations de débogage">
+            <IconButton size="small" sx={{ ml: 1 }} onClick={() => setShowDebug(!showDebug)}>
+              <InfoIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Typography>
+        
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
+            <CircularProgress />
+          </Box>
+        ) : error ? (
+          <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+        ) : (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
+            {/* Contrôles de manipulation d'image */}
+            <Paper elevation={0} sx={{ p: 2, mb: 2, backgroundColor: '#f8f9fa' }}>
+              <Grid container spacing={2} alignItems="center">
+                <Grid item>
+                  <ButtonGroup variant="contained" size="small">
+                    <Button onClick={handleZoomIn} startIcon={<ZoomInIcon />}>Zoom +</Button>
+                    <Button onClick={handleZoomOut} startIcon={<ZoomOutIcon />}>Zoom -</Button>
+                  </ButtonGroup>
+                </Grid>
+                <Grid item>
+                  <ButtonGroup variant="contained" size="small">
+                    <Button onClick={handleRotateLeft} startIcon={<RotateLeftIcon />}>Rotation G</Button>
+                    <Button onClick={handleRotateRight} startIcon={<RotateRightIcon />}>Rotation D</Button>
+                  </ButtonGroup>
+                </Grid>
+                <Grid item>
+                  <Button 
+                    variant="contained" 
+                    size="small" 
+                    onClick={handleReset} 
+                    startIcon={<RestartAltIcon />}
+                  >
+                    Réinitialiser
+                  </Button>
+                </Grid>
+                <Grid item>
+                  <Button 
+                    variant="outlined" 
+                    size="small" 
+                    onClick={handleDownload} 
+                    startIcon={<DownloadIcon />}
+                    disabled={!instanceId}
+                  >
+                    Télécharger DICOM
+                  </Button>
+                </Grid>
+              </Grid>
               
-              <div className="btn-group me-2" role="group">
-                <button className="btn btn-outline-primary" onClick={() => handleRotation(90)}>
-                  <i className="fas fa-redo"></i> Rotation 90°
-                </button>
-                <button className="btn btn-outline-primary" onClick={() => handleRotation(-90)}>
-                  <i className="fas fa-undo"></i> Rotation -90°
-                </button>
-              </div>
-              
-              <div className="btn-group me-2" role="group">
-                <button className="btn btn-outline-primary" onClick={() => activateTool('Pan')}>
-                  <i className="fas fa-arrows-alt"></i> Déplacer
-                </button>
-                <button className="btn btn-outline-primary" onClick={() => activateTool('Wwwc')}>
-                  <i className="fas fa-adjust"></i> Contraste
-                </button>
-              </div>
-              
-              <div className="btn-group" role="group">
-                <button className="btn btn-outline-primary" onClick={() => activateTool('Length')}>
-                  <i className="fas fa-ruler"></i> Mesure
-                </button>
-                <button className="btn btn-outline-primary" onClick={() => activateTool('Angle')}>
-                  <i className="fas fa-ruler-combined"></i> Angle
-                </button>
-                <button className="btn btn-outline-primary" onClick={() => activateTool('RectangleRoi')}>
-                  <i className="far fa-square"></i> Rectangle
-                </button>
-                <button className="btn btn-outline-primary" onClick={() => activateTool('EllipticalRoi')}>
-                  <i className="far fa-circle"></i> Ellipse
-                </button>
-              </div>
-            </div>
+              {/* Affichage du niveau de zoom */}
+              <Box sx={{ mt: 2, px: 1 }}>
+                <Typography variant="body2" gutterBottom>Zoom: {zoom}%</Typography>
+                <Slider
+                  value={zoom}
+                  min={50}
+                  max={200}
+                  step={5}
+                  onChange={(e, newValue) => setZoom(newValue)}
+                  aria-labelledby="zoom-slider"
+                  size="small"
+                />
+              </Box>
+            </Paper>
             
-            <button 
-              className="btn btn-success mt-2" 
-              onClick={captureAnnotation}
-              disabled={!instance}
+            {/* Conteneur de l'image */}
+            <Paper 
+              elevation={2} 
+              sx={{ 
+                width: '100%', 
+                height: '500px', 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center',
+                overflow: 'hidden',
+                backgroundColor: '#f5f5f5',
+                position: 'relative'
+              }}
             >
-              <i className="fas fa-save"></i> Enregistrer les annotations
-            </button>
-          </div>
-          
-          {/* Informations sur l'image */}
-          <div className="dicom-info mt-3">
-            <h5>Informations DICOM</h5>
-            <div className="row">
-              <div className="col-md-6">
-                <p><strong>ID d'instance:</strong> {instanceId}</p>
-              </div>
-              <div className="col-md-6">
-                <p><strong>Échelle:</strong> {viewportState.scale.toFixed(2)}</p>
-                <p><strong>Rotation:</strong> {viewportState.rotation}°</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+              <Box 
+                ref={viewerRef} 
+                sx={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center',
+                  overflow: 'hidden'
+                }}
+              />
+              
+              {!instance && !loading && !error && (
+                <Typography variant="body1" color="text.secondary">
+                  Sélectionnez une image à visualiser
+                </Typography>
+              )}
+            </Paper>
+            
+            {/* Informations sur l'image */}
+            {instance && (
+              <Paper elevation={0} sx={{ p: 2, backgroundColor: '#f8f9fa' }}>
+                <Typography variant="subtitle2" gutterBottom>Informations sur l'image</Typography>
+                <Grid container spacing={2}>
+                  <Grid item>
+                    <Typography variant="body2">Dimensions: {instance.width || '?'} x {instance.height || '?'} px</Typography>
+                  </Grid>
+                  <Grid item>
+                    <Typography variant="body2">Zoom: {zoom}%</Typography>
+                  </Grid>
+                  <Grid item>
+                    <Typography variant="body2">Rotation: {rotation}°</Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+            )}
+            
+            {/* Section de débogage */}
+            {showDebug && (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                <Typography variant="subtitle2" gutterBottom>Informations de débogage</Typography>
+                <Typography variant="body2">Instance ID: {debugInfo.instanceId || instanceId}</Typography>
+                <Typography variant="body2">URL de l'image: {debugInfo.imageUrl}</Typography>
+                <Typography variant="body2">URL du fichier DICOM: {debugInfo.fileUrl}</Typography>
+                <Typography variant="body2">URL de prévisualisation: {debugInfo.previewUrl}</Typography>
+                <Typography variant="body2">Horodatage: {debugInfo.timestamp}</Typography>
+                <Typography variant="body2">État: {loading ? 'Chargement' : error ? 'Erreur' : instance ? 'Image chargée' : 'Aucune image'}</Typography>
+              </Alert>
+            )}
+          </Box>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

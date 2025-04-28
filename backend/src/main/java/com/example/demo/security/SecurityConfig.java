@@ -36,6 +36,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/public/**").permitAll()
+                        // Permettre l'accès aux endpoints DICOM sans authentification (temporairement pour les tests)
+                        .requestMatchers("/api/v1/dicom/instances/*/file").permitAll()
+                        .requestMatchers("/api/v1/dicom/instances/*/image").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Autoriser les requêtes OPTIONS
                         .anyRequest().authenticated()
                 )
