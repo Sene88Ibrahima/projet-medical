@@ -15,6 +15,7 @@ import MessagesPage from './pages/MessagesPage';
 import DicomViewerPage from './pages/DicomViewerPage';
 import ProfilePage from './pages/ProfilePage';
 import EditProfilePage from './pages/EditProfilePage';
+import PatientDicomImagesPage from './pages/PatientDicomImagesPage';
 
 // Components
 import Navbar from './components/common/Navbar';
@@ -151,8 +152,8 @@ function App() {
               <Route
                 path="/patients/:patientId/dicom"
                 element={
-                  <RoleBasedRoute roles={['DOCTOR', 'ADMIN']}>
-                    <DicomViewerPage />
+                  <RoleBasedRoute roles={['DOCTOR', 'ADMIN', 'NURSE']}>
+                    <PatientDicomImagesPage />
                   </RoleBasedRoute>
                 }
               />
@@ -160,6 +161,22 @@ function App() {
                 path="/patients/:patientId/dicom/:studyId"
                 element={
                   <RoleBasedRoute roles={['DOCTOR', 'ADMIN']}>
+                    <DicomViewerPage />
+                  </RoleBasedRoute>
+                }
+              />
+              <Route
+                path="/dicom-viewer/:instanceId"
+                element={
+                  <RoleBasedRoute roles={['DOCTOR', 'ADMIN', 'NURSE']}>
+                    <DicomViewerPage />
+                  </RoleBasedRoute>
+                }
+              />
+              <Route
+                path="/dicom-viewer/study/:studyId"
+                element={
+                  <RoleBasedRoute roles={['DOCTOR', 'ADMIN', 'NURSE']}>
                     <DicomViewerPage />
                   </RoleBasedRoute>
                 }

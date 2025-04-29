@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import DicomViewer from '../components/dicom/DicomViewer';
 import DicomUploader from '../components/dicom/DicomUploader';
+import DicomReferenceManager from '../components/dicom/DicomReferenceManager';
 import axios from 'axios';
 import medicalImageService from '../services/medicalImageService';
 
@@ -115,6 +116,10 @@ const MedicalRecordDetailPage = () => {
     }
   };
 
+  const handleViewDicom = (instanceId) => {
+    navigate(`/dicom-viewer/${instanceId}`);
+  };
+
   if (loading) {
     return (
       <div className="container mt-5">
@@ -167,11 +172,16 @@ const MedicalRecordDetailPage = () => {
         </div>
         <div className="col-md-4">
           {canEditImages && (
-            <DicomUploader 
-              recordId={recordId} 
-              onUploadSuccess={handleImageUploadSuccess} 
-            />
+            <div className="upload-controls">
+              <DicomUploader 
+                medicalRecordId={recordId} 
+                onUploadSuccess={handleImageUploadSuccess} 
+              />
+            </div>
           )}
+          <div className="mt-3">
+            <DicomReferenceManager medicalRecordId={parseInt(recordId)} />
+          </div>
         </div>
       </div>
 

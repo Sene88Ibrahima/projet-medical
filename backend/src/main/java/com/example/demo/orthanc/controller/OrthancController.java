@@ -49,6 +49,24 @@ public class OrthancController {
             throw e;
         }
     }
+    
+    @GetMapping("/study-ids")
+    @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN', 'PATIENT', 'NURSE')")
+    public ResponseEntity<List<String>> getAllStudyIds(
+            @RequestParam(required = false) String patientId) {
+        System.out.println("Requête reçue pour /api/v1/dicom/study-ids avec patientId = " + patientId);
+        try {
+            // Récupérer directement les IDs d'études depuis Orthanc
+            List<String> studyIds = orthancService.getStudyIds();
+            System.out.println("Nombre d'IDs d'études récupérés : " + (studyIds != null ? studyIds.size() : 0));
+            System.out.println("IDs d'études : " + studyIds);
+            return ResponseEntity.ok(studyIds);
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la récupération des IDs d'études : " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
+    }
 
     @DeleteMapping("/studies/{studyId}")
     @PreAuthorize("hasRole('ADMIN')")
@@ -86,23 +104,34 @@ public class OrthancController {
     }
 
     @GetMapping("/instances/{instanceId}/preview")
-    @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN', 'PATIENT')")
+    @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN', 'PATIENT', 'NURSE')")
     public ResponseEntity<byte[]> getInstancePreview(@PathVariable String instanceId) {
         try {
             byte[] imageData = orthancService.getInstancePreview(instanceId);
             
             HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.IMAGE_JPEG);
+            headers.setContentType(MediaType.IMAGE_PNG);
+            
+            // Ajouter des en-têtes de cache pour éviter les requêtes répétées
+            headers.setCacheControl("public, max-age=86400"); // Cache côté client pendant 24h
+            
+            // Ajout d'en-têtes CORS pour permettre l'accès depuis n'importe quelle origine
+            headers.add("Access-Control-Allow-Origin", "*");
+            headers.add("Access-Control-Allow-Methods", "GET, OPTIONS");
+            headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization");
+            
+            // Ajouter un en-tête Vary pour indiquer que la réponse peut varier en fonction de l'en-tête Accept
+            headers.add("Vary", "Accept");
             
             return new ResponseEntity<>(imageData, headers, HttpStatus.OK);
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @GetMapping(value = "/instances/{instanceId}/image", produces = MediaType.IMAGE_JPEG_VALUE)
-    // Commenté temporairement pour les tests
-    // @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN', 'PATIENT', 'NURSE')")
+    @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN', 'PATIENT', 'NURSE')")
     public ResponseEntity<byte[]> getInstanceImage(@PathVariable String instanceId) {
         try {
             byte[] imageData = orthancService.getInstanceImage(instanceId);
@@ -110,20 +139,26 @@ public class OrthancController {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.IMAGE_JPEG);
             
+            // Ajouter des en-têtes de cache pour éviter les requêtes répétées
+            headers.setCacheControl("public, max-age=86400"); // Cache côté client pendant 24h
+            
             // Ajout d'en-têtes CORS pour permettre l'accès depuis n'importe quelle origine
             headers.add("Access-Control-Allow-Origin", "*");
             headers.add("Access-Control-Allow-Methods", "GET, OPTIONS");
             headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization");
             
+            // Ajouter un en-tête Vary pour indiquer que la réponse peut varier en fonction de l'en-tête Accept
+            headers.add("Vary", "Accept");
+            
             return new ResponseEntity<>(imageData, headers, HttpStatus.OK);
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @GetMapping(value = "/instances/{instanceId}/file")
-    // Commenté temporairement pour les tests
-    // @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN', 'PATIENT', 'NURSE')")
+    @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN', 'PATIENT', 'NURSE')")
     public ResponseEntity<byte[]> getInstanceFile(@PathVariable String instanceId) {
         try {
             byte[] dicomData = orthancService.getInstanceDicomFile(instanceId);
@@ -134,10 +169,16 @@ public class OrthancController {
                     .filename("instance_" + instanceId + ".dcm")
                     .build());
             
+            // Ajouter des en-têtes de cache pour éviter les requêtes répétées
+            headers.setCacheControl("public, max-age=86400"); // Cache côté client pendant 24h
+            
             // Ajout d'en-têtes CORS pour permettre l'accès depuis n'importe quelle origine
             headers.add("Access-Control-Allow-Origin", "*");
             headers.add("Access-Control-Allow-Methods", "GET, OPTIONS");
             headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization");
+            
+            // Ajouter un en-tête Vary pour indiquer que la réponse peut varier en fonction de l'en-tête Accept
+            headers.add("Vary", "Accept");
             
             return new ResponseEntity<>(dicomData, headers, HttpStatus.OK);
         } catch (Exception e) {

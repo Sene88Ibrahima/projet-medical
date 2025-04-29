@@ -123,8 +123,26 @@ const DicomViewerPage = () => {
         navigate(`/patients/${patientId}/dicom/${studyId}`, { replace: true });
       }
       
-      // Charger les séries pour cette étude
+      // Charger les séries pour cette étude SEULEMENT si elles ne sont pas déjà chargées
       const fetchSeries = async () => {
+        // Vérifier si les séries sont déjà chargées pour cette étude
+        if (selectedStudy.series && selectedStudy.series.length > 0) {
+          console.log("Séries déjà chargées pour cette étude, utilisation du cache local");
+          updateDebugInfo({ 
+            source: "cache local",
+            seriesCount: selectedStudy.series.length,
+            seriesData: selectedStudy.series.map(s => s.ID || s.id)
+          });
+          
+          // Sélectionner la première série si aucune n'est sélectionnée
+          if (!selectedSeries) {
+            const firstSeries = selectedStudy.series[0];
+            updateDebugInfo({ selectedSeriesId: firstSeries.ID || firstSeries.id });
+            setSelectedSeries(firstSeries);
+          }
+          return;
+        }
+
         try {
           console.log("Chargement des séries pour l'étude:", studyId);
           const seriesData = await dicomService.getStudy(studyId);
@@ -161,23 +179,52 @@ const DicomViewerPage = () => {
       
       fetchSeries();
     }
-  }, [selectedStudy, patientId, navigate]);
+  }, [selectedStudy, patientId, navigate, updateDebugInfo, setSelectedSeries, setSelectedInstance, setError, selectedSeries]);
 
   // Quand une série est sélectionnée, charger les instances
   useEffect(() => {
+    let isMounted = true; // Drapeau pour éviter les mises à jour sur un composant démonté
+    
     if (!selectedSeries) {
       return;
     }
     
     // Utiliser l'ID correct (peut être id ou ID)
     const seriesId = selectedSeries.ID || selectedSeries.id;
-    updateDebugInfo({ action: "Série sélectionnée", seriesId });
+    if (isMounted) {
+      updateDebugInfo({ action: "Série sélectionnée", seriesId });
+    }
     
-    if (seriesId && !selectedSeries.instances) {
+    // Si les instances sont déjà chargées, utiliser le cache local
+    if (selectedSeries.instances && selectedSeries.instances.length > 0) {
+      console.log("Instances déjà chargées pour cette série, utilisation du cache local");
+      updateDebugInfo({ 
+        source: "cache local",
+        instancesCount: selectedSeries.instances.length,
+        instancesData: selectedSeries.instances.map(i => i.ID || i.id)
+      });
+      
+      // Si aucune instance n'est sélectionnée, sélectionner la première
+      if (!selectedInstance) {
+        const firstInstance = selectedSeries.instances[0];
+        updateDebugInfo({ 
+          action: "Sélection automatique de la première instance (cache local)",
+          selectedInstanceId: firstInstance.ID || firstInstance.id 
+        });
+        setSelectedInstance(firstInstance);
+      }
+      return;
+    }
+    
+    // Si les instances ne sont pas encore chargées, les récupérer
+    if (seriesId) {
       const fetchInstances = async () => {
         try {
           console.log("Chargement des instances pour la série:", seriesId);
           const seriesDetails = await dicomService.getSeries(seriesId);
+          
+          // Vérifier si le composant est toujours monté avant de mettre à jour l'état
+          if (!isMounted) return;
           
           console.log("Détails de la série récupérés:", seriesDetails);
           updateDebugInfo({ 
@@ -206,6 +253,7 @@ const DicomViewerPage = () => {
             updateDebugInfo({ warning: "Aucune instance trouvée" });
           }
         } catch (err) {
+          if (!isMounted) return;
           console.error("Erreur lors du chargement des instances:", err);
           updateDebugInfo({ error: `Erreur instances: ${err.message}` });
           setError("Impossible de charger les images pour cette série.");
@@ -213,16 +261,28 @@ const DicomViewerPage = () => {
       };
       
       fetchInstances();
-    } else if (selectedSeries.instances && selectedSeries.instances.length > 0 && !selectedInstance) {
-      // Si les instances sont déjà chargées mais aucune n'est sélectionnée
-      const firstInstance = selectedSeries.instances[0];
-      updateDebugInfo({ 
-        action: "Sélection automatique de la première instance",
-        selectedInstanceId: firstInstance.ID || firstInstance.id 
-      });
-      setSelectedInstance(firstInstance);
     }
-  }, [selectedSeries]);
+    
+    // Nettoyage pour éviter les mises à jour sur un composant démonté
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedSeries, updateDebugInfo, setSelectedSeries, setSelectedInstance, setError, dicomService.getSeries]);
+
+  // Effet pour mettre à jour l'ID d'instance quand une instance est sélectionnée
+  useEffect(() => {
+    let isMounted = true;
+    
+    if (selectedInstance && isMounted) {
+      const instanceId = selectedInstance.ID || selectedInstance.id || selectedInstance.orthanc_instance_id;
+      console.log("Instance sélectionnée, ID:", instanceId);
+      updateDebugInfo({ currentInstanceId: instanceId });
+    }
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedInstance, updateDebugInfo]);
 
   // Fonction pour charger directement une instance DICOM
   const handleDirectInstanceLoad = () => {

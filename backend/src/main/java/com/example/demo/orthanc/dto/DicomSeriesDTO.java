@@ -6,7 +6,8 @@ import java.util.List;
 @Data
 public class DicomSeriesDTO {
     private String id;
-    private String description;
+    private String seriesDescription;
     private String modality;
+    private Integer imagesCount;
     private List<DicomInstanceDTO> instances;
 }

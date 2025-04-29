@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { 
   Box, 
   CircularProgress, 
@@ -31,10 +31,30 @@ const DicomViewer = ({ instanceId, onAnnotationChange }) => {
   const [instance, setInstance] = useState(null);
   const [debugInfo, setDebugInfo] = useState({});
   const [showDebug, setShowDebug] = useState(false);
+  const isMountedRef = useRef(true);
+  const retryCountRef = useRef(0);
+  const [imageSource, setImageSource] = useState(null);
   
   // États pour les manipulations d'image
   const [zoom, setZoom] = useState(100);
   const [rotation, setRotation] = useState(0);
+  
+  // S'assurer que le composant est monté
+  useEffect(() => {
+    console.log("DicomViewer monté, container:", viewerRef.current ? "disponible" : "non disponible");
+    isMountedRef.current = true;
+    
+    // Nettoyer les événements et références lors du démontage
+    return () => {
+      console.log("DicomViewer démonté");
+      isMountedRef.current = false;
+      
+      // Libérer l'URL de l'objet Blob si elle existe
+      if (imageSource && imageSource.startsWith('blob:')) {
+        URL.revokeObjectURL(imageSource);
+      }
+    };
+  }, [imageSource]);
   
   // Fonctions de manipulation d'image
   const handleZoomIn = () => {
@@ -73,217 +93,234 @@ const DicomViewer = ({ instanceId, onAnnotationChange }) => {
     document.body.removeChild(a);
   };
 
-  // Charger et afficher l'image lorsque instanceId change
+  const displayImage = useCallback((url, method) => {
+    console.log(`Tentative d'affichage de l'image via méthode: ${method}, URL: ${url}`);
+    
+    // Vérifier si le composant est monté
+    if (!isMountedRef.current) {
+      console.warn("Abandon: composant déjà démonté");
+      return;
+    }
+    
+    // Fonction directe pour afficher l'image (plus de tentatives multiples)
+    const renderImage = () => {
+      const container = viewerRef.current;
+      
+      // Le conteneur devrait toujours être disponible grâce à notre structure DOM
+      if (!container) {
+        console.error("ERREUR CRITIQUE: Le conteneur est inexplicablement absent du DOM");
+        setError("Erreur technique: conteneur d'affichage non disponible");
+        setLoading(false);
+        return;
+      }
+
+      console.log("Conteneur disponible! Dimensions:", container.offsetWidth, "x", container.offsetHeight);
+      
+      // Créer et configurer l'image
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      
+      // Définir tous les styles et attributs essentiels
+      img.style.display = 'block';
+      img.style.margin = 'auto';
+      img.style.maxWidth = '100%';
+      img.style.maxHeight = '100%';
+      img.style.transition = 'all 0.3s ease';
+      img.setAttribute('draggable', 'false');
+      img.setAttribute('data-method', method);
+      img.setAttribute('alt', 'Image DICOM');
+      
+      // Gérer le chargement réussi
+      img.onload = () => {
+        console.log(`Succès: image chargée (${method}), dimensions: ${img.width}x${img.height}`);
+        
+        // Vider le conteneur avant d'ajouter l'image
+        while (container.firstChild) {
+          container.removeChild(container.firstChild);
+        }
+        
+        // Appliquer le zoom et la rotation
+        img.style.transform = `scale(${zoom/100}) rotate(${rotation}deg)`;
+        container.appendChild(img);
+        
+        // Mettre à jour l'état
+        setImageSource(url);
+        setInstance({
+          width: img.width,
+          height: img.height,
+          method: method,
+          loaded: true,
+          timestamp: new Date().toISOString()
+        });
+        setLoading(false);
+        setError(null);
+        
+        // Garantir la visibilité avec un délai
+        setTimeout(() => {
+          if (img.style.opacity !== '1') img.style.opacity = '1';
+        }, 50);
+      };
+      
+      // Gérer les erreurs de chargement
+      img.onerror = (err) => {
+        console.error(`Erreur de chargement (${method}):`, err);
+        setError(`Impossible de charger l'image DICOM par la méthode ${method}. Le serveur a renvoyé une erreur.`);
+        setLoading(false); // Toujours arrêter le chargement pour montrer l'erreur clairement
+      };
+      
+      // Démarrer le chargement
+      console.log(`Démarrage du chargement: ${url}`);
+      img.src = url;
+    };
+    
+    // Appeler directement la fonction de rendu
+    renderImage();
+  }, [zoom, rotation]);
+
+  // Charger l'image lorsque l'ID d'instance change
   useEffect(() => {
-    if (!instanceId || !viewerRef.current) {
+    // Réinitialiser l'état
+    setError(null);
+    
+    if (!instanceId) {
+      console.log("Aucun ID d'instance fourni");
       setLoading(false);
       return;
     }
-
-    const loadAndDisplayImage = async () => {
+    
+    // Démarrer le chargement
+    setLoading(true);
+    console.log("Chargement d'une nouvelle instance:", instanceId);
+    
+    // Libérer l'ancienne URL blob si nécessaire
+    if (imageSource && imageSource.startsWith('blob:')) {
+      URL.revokeObjectURL(imageSource);
+      setImageSource(null);
+    }
+    
+    // Extraire l'ID réel (gérer les cas où instanceId est un objet)
+    const actualInstanceId = typeof instanceId === 'object' 
+      ? (instanceId.ID || instanceId.id) 
+      : instanceId;
+    
+    // Définir toutes les URLs possibles
+    const imageUrl = `${window.location.origin}/api/v1/dicom/instances/${actualInstanceId}/image`;
+    const fileUrl = `${window.location.origin}/api/v1/dicom/instances/${actualInstanceId}/file`;
+    const previewUrl = `${window.location.origin}/api/v1/dicom/instances/${actualInstanceId}/preview`;
+    
+    // Mettre à jour les infos de débogage
+    setDebugInfo({
+      instanceId: actualInstanceId,
+      imageUrl,
+      fileUrl,
+      previewUrl,
+      loadAttempt: new Date().toISOString()
+    });
+    
+    // Nouveau système de cascade avec gestion d'erreurs améliorée
+    const loadSequence = async () => {
+      // Méthode 1: Service DICOM (blob URL)
       try {
-        setLoading(true);
-        setError(null);
-        
-        // Utiliser l'ID correct de l'instance
-        const actualInstanceId = typeof instanceId === 'object' ? (instanceId.ID || instanceId.id) : instanceId;
-        
-        console.log("Chargement de l'image pour l'instance:", actualInstanceId);
-        
-        // URL directe de l'image JPEG
-        const imageUrl = `${window.location.origin}/api/v1/dicom/instances/${actualInstanceId}/image`;
-        console.log("URL de l'image:", imageUrl);
-        
-        // URL alternative pour le fichier DICOM brut
-        const fileUrl = `${window.location.origin}/api/v1/dicom/instances/${actualInstanceId}/file`;
-        console.log("URL du fichier DICOM:", fileUrl);
-        
-        // URL de prévisualisation
-        const previewUrl = `${window.location.origin}/api/v1/dicom/instances/${actualInstanceId}/preview`;
-        console.log("URL de prévisualisation:", previewUrl);
-        
-        // Mettre à jour les informations de débogage
-        setDebugInfo({
-          instanceId: actualInstanceId,
-          imageUrl: imageUrl,
-          fileUrl: fileUrl,
-          previewUrl: previewUrl,
-          timestamp: new Date().toISOString()
-        });
-        
-        // Fonction pour charger l'image
-        const loadImage = (url) => {
-          return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.crossOrigin = "anonymous";
-            
-            img.onload = function() {
-              console.log(`Image chargée avec succès depuis ${url}, dimensions:`, img.width, "x", img.height);
-              resolve(img);
-            };
-            
-            img.onerror = function(err) {
-              console.error(`Erreur lors du chargement de l'image depuis ${url}:`, err);
-              reject(err);
-            };
-            
-            img.src = url;
-          });
-        };
-        
-        // Utiliser le service DICOM pour récupérer l'image
-        try {
-          console.log("Utilisation du service DICOM pour récupérer l'image...");
-          const imageObjectUrl = await dicomService.getInstanceImage(actualInstanceId);
-          
-          // Charger l'image à partir de l'URL de l'objet
-          const img = await loadImage(imageObjectUrl);
-          
-          // Afficher l'image dans le conteneur
-          const container = viewerRef.current;
-          if (container) {
-            container.innerHTML = '';
-            
-            // Appliquer le zoom et la rotation
-            img.style.maxWidth = '100%';
-            img.style.maxHeight = '100%';
-            img.style.transform = `scale(${zoom / 100}) rotate(${rotation}deg)`;
-            img.style.transition = 'transform 0.3s ease';
-            
-            container.appendChild(img);
-            setInstance({ width: img.width, height: img.height });
-            setLoading(false);
-          }
-        } catch (serviceError) {
-          console.error("Erreur avec le service DICOM:", serviceError);
-          
-          // Méthode de secours: essayer de charger directement l'image
-          try {
-            console.log("Tentative de chargement direct de l'image JPEG...");
-            
-            const img = await loadImage(imageUrl);
-            
-            // Afficher l'image dans le conteneur
-            const container = viewerRef.current;
-            container.innerHTML = '';
-            
-            // Appliquer le zoom et la rotation
-            img.style.maxWidth = '100%';
-            img.style.maxHeight = '100%';
-            img.style.transform = `scale(${zoom / 100}) rotate(${rotation}deg)`;
-            img.style.transition = 'transform 0.3s ease';
-            
-            container.appendChild(img);
-            setInstance({ width: img.width, height: img.height });
-            setLoading(false);
-          } catch (directError) {
-            console.error("Échec du chargement direct de l'image:", directError);
-            
-            // Dernière tentative: essayer la prévisualisation
-            try {
-              console.log("Tentative de chargement de la prévisualisation...");
-              const img = await loadImage(previewUrl);
-              
-              // Afficher l'image dans le conteneur
-              const container = viewerRef.current;
-              container.innerHTML = '';
-              
-              // Appliquer le zoom et la rotation
-              img.style.maxWidth = '100%';
-              img.style.maxHeight = '100%';
-              img.style.transform = `scale(${zoom / 100}) rotate(${rotation}deg)`;
-              img.style.transition = 'transform 0.3s ease';
-              
-              container.appendChild(img);
-              setInstance({ width: img.width, height: img.height });
-              setLoading(false);
-            } catch (previewError) {
-              console.error("Échec du chargement de la prévisualisation:", previewError);
-              throw new Error("Impossible de charger l'image DICOM. Essayez un autre format ou vérifiez l'ID de l'instance.");
-            }
-          }
+        console.log("Tentative 1: Utilisation du service DICOM via getInstanceImage...");
+        const blobUrl = await dicomService.getInstanceImage(actualInstanceId);
+        if (blobUrl) {
+          displayImage(blobUrl, 'service');
+          return; // Succès, arrêter ici
         }
-      } catch (error) {
-        console.error("Erreur lors du chargement de l'image:", error);
-        setError(`Erreur: ${error.message}`);
-        setLoading(false);
+      } catch (serviceError) {
+        console.error("Erreur avec le service DICOM:", serviceError);
       }
+      
+      // Méthode 2: URL directe vers l'image
+      console.log("Tentative 2: Chargement direct via imageUrl...");
+      displayImage(imageUrl, 'direct');
     };
     
-    loadAndDisplayImage();
-  }, [instanceId, zoom, rotation]);
-  
-  // Appliquer les transformations à l'image quand zoom ou rotation changent
+    loadSequence();
+    
+    // Cleanup lors du changement d'instance
+    return () => {
+      console.log("Nettoyage de l'ancienne instance");
+      // Le nettoyage des blobs URL se fait au début du prochain effet
+    };
+  }, [instanceId, displayImage]);
+
+  // Mettre à jour le zoom et la rotation sur les images chargées
   useEffect(() => {
-    if (instance && instance.width && viewerRef.current) {
+    if (instance && viewerRef.current) {
       const img = viewerRef.current.querySelector('img');
       if (img) {
-        img.style.transform = `scale(${zoom / 100}) rotate(${rotation}deg)`;
+        img.style.transform = `scale(${zoom/100}) rotate(${rotation}deg)`;
       }
     }
-  }, [zoom, rotation, instance]);
+  }, [zoom, rotation, instance, imageSource]);
 
+  // Afficher le composant
   return (
-    <Card elevation={3} sx={{ width: '100%', mb: 3, overflow: 'visible' }}>
+    <Card elevation={3}>
       <CardContent>
-        <Typography variant="h6" gutterBottom sx={{ borderBottom: '1px solid #eee', pb: 1, mb: 2 }}>
-          Visualiseur d'images médicales DICOM
-          <Tooltip title="Afficher/masquer les informations de débogage">
-            <IconButton size="small" sx={{ ml: 1 }} onClick={() => setShowDebug(!showDebug)}>
-              <InfoIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Typography>
-        
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
-            <CircularProgress />
-          </Box>
-        ) : error ? (
-          <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
-        ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
-            {/* Contrôles de manipulation d'image */}
-            <Paper elevation={0} sx={{ p: 2, mb: 2, backgroundColor: '#f8f9fa' }}>
-              <Grid container spacing={2} alignItems="center">
-                <Grid item>
-                  <ButtonGroup variant="contained" size="small">
-                    <Button onClick={handleZoomIn} startIcon={<ZoomInIcon />}>Zoom +</Button>
-                    <Button onClick={handleZoomOut} startIcon={<ZoomOutIcon />}>Zoom -</Button>
-                  </ButtonGroup>
-                </Grid>
-                <Grid item>
-                  <ButtonGroup variant="contained" size="small">
-                    <Button onClick={handleRotateLeft} startIcon={<RotateLeftIcon />}>Rotation G</Button>
-                    <Button onClick={handleRotateRight} startIcon={<RotateRightIcon />}>Rotation D</Button>
-                  </ButtonGroup>
-                </Grid>
-                <Grid item>
-                  <Button 
-                    variant="contained" 
-                    size="small" 
-                    onClick={handleReset} 
-                    startIcon={<RestartAltIcon />}
-                  >
-                    Réinitialiser
-                  </Button>
-                </Grid>
-                <Grid item>
-                  <Button 
-                    variant="outlined" 
-                    size="small" 
-                    onClick={handleDownload} 
-                    startIcon={<DownloadIcon />}
-                    disabled={!instanceId}
-                  >
-                    Télécharger DICOM
-                  </Button>
-                </Grid>
-              </Grid>
+        {/* Contenu à afficher uniquement si chargé ou erreur */}
+        {(loading || error || instance || !instanceId) && (
+          <Box sx={{ position: 'relative' }}>
+            {/* Barre d'outils en haut */}
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                p: 1, 
+                mb: 2, 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                backgroundColor: '#f8f9fa'
+              }}
+            >
+              <ButtonGroup variant="outlined" size="small">
+                <Tooltip title="Zoom avant">
+                  <IconButton onClick={handleZoomIn} disabled={!instance}>
+                    <ZoomInIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Zoom arrière">
+                  <IconButton onClick={handleZoomOut} disabled={!instance}>
+                    <ZoomOutIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Rotation gauche">
+                  <IconButton onClick={handleRotateLeft} disabled={!instance}>
+                    <RotateLeftIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Rotation droite">
+                  <IconButton onClick={handleRotateRight} disabled={!instance}>
+                    <RotateRightIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Réinitialiser">
+                  <IconButton onClick={handleReset} disabled={!instance}>
+                    <RestartAltIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Télécharger">
+                  <IconButton onClick={handleDownload} disabled={!instanceId}>
+                    <DownloadIcon />
+                  </IconButton>
+                </Tooltip>
+              </ButtonGroup>
               
-              {/* Affichage du niveau de zoom */}
-              <Box sx={{ mt: 2, px: 1 }}>
-                <Typography variant="body2" gutterBottom>Zoom: {zoom}%</Typography>
+              <Tooltip title="Informations de débogage">
+                <IconButton 
+                  onClick={() => setShowDebug(prev => !prev)} 
+                  color={showDebug ? "primary" : "default"}
+                >
+                  <InfoIcon />
+                </IconButton>
+              </Tooltip>
+              
+              {/* Slider de zoom */}
+              <Box sx={{ width: 200, ml: 2, display: instance ? 'block' : 'none' }}>
+                <Typography id="zoom-slider" gutterBottom variant="caption">
+                  Zoom: {zoom}%
+                </Typography>
                 <Slider
                   value={zoom}
                   min={50}
@@ -296,31 +333,48 @@ const DicomViewer = ({ instanceId, onAnnotationChange }) => {
               </Box>
             </Paper>
             
-            {/* Conteneur de l'image */}
+            {/* Conteneur d'affichage de l'image */}
             <Paper 
               elevation={2} 
               sx={{ 
-                width: '100%', 
-                height: '500px', 
-                display: 'flex', 
-                justifyContent: 'center', 
+                p: 1, 
+                mb: 2, 
+                height: 500,
+                display: 'flex',
                 alignItems: 'center',
-                overflow: 'hidden',
-                backgroundColor: '#f5f5f5',
-                position: 'relative'
+                justifyContent: 'center',
+                position: 'relative', // Important pour positionner les éléments enfants
+                overflow: 'hidden' // Éviter débordement des images
               }}
             >
-              <Box 
+              {/* Zone de visualisation - TOUJOURS PRÉSENTE même avec loading/error */}
+              <div 
                 ref={viewerRef} 
-                sx={{ 
+                className="dicom-viewer-container" 
+                style={{ 
                   width: '100%', 
-                  height: '100%', 
-                  display: 'flex', 
-                  justifyContent: 'center', 
+                  height: '100%',
+                  position: 'absolute', // Positionnement absolu pour garantir présence
+                  top: 0,
+                  left: 0,
+                  display: 'flex',
                   alignItems: 'center',
-                  overflow: 'hidden'
+                  justifyContent: 'center'
                 }}
               />
+              
+              {/* Superposition des états (loading, error) par-dessus le container */}
+              {loading && (
+                <div style={{zIndex: 10, position: 'absolute', backgroundColor: 'rgba(255,255,255,0.7)'}}>
+                  <CircularProgress />
+                </div>
+              )}
+              
+              {error && (
+                <Alert severity="error" sx={{ width: '80%', zIndex: 10, position: 'absolute' }}>
+                  {error}
+                </Alert>
+              )}
               
               {!instance && !loading && !error && (
                 <Typography variant="body1" color="text.secondary">

@@ -21,6 +21,7 @@
     "cornerstone-wado-image-loader": "^4.13.2",
     "dicom-parser": "^1.8.21",
     "jquery": "^3.7.1",
+    "jwt-decode": "^4.0.0",
     "popper.js": "^1.16.1",
     "react": "^19.0.0",
     "react-bootstrap": "^2.10.9",

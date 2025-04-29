@@ -57,7 +57,8 @@ const dicomService = {
     try {
       console.log("Récupération des IDs d'études DICOM avec params:", params);
       
-      const response = await axios.get(`${API_URL}/studies`, { 
+      // Utiliser le nouvel endpoint dédié aux IDs d'études
+      const response = await axios.get(`${API_URL}/study-ids`, { 
         params,
         headers: authHeader() 
       });
@@ -70,50 +71,10 @@ const dicomService = {
         return [];
       }
       
-      // Log détaillé de chaque élément de la réponse
-      response.data.forEach((item, index) => {
-        console.log(`Élément ${index} de la réponse:`, item);
-        if (typeof item === 'object') {
-          console.log(`Propriétés de l'élément ${index}:`, Object.keys(item));
-        }
-      });
+      // Plus besoin de transformer les données car le backend renvoie déjà les IDs au bon format
+      const studyIds = response.data;
       
-      // Extraire uniquement les IDs d'études
-      const studyIds = response.data.map(study => {
-        // Si c'est une chaîne de caractères, c'est directement l'ID
-        if (typeof study === 'string') {
-          console.log("ID d'étude (chaîne):", study);
-          return study;
-        } 
-        // Si c'est un objet, essayer de récupérer l'ID
-        else if (study && typeof study === 'object') {
-          // Essayer différentes propriétés possibles pour l'ID
-          const id = study.ID || study.id || study.Id || 
-                   (study.MainDicomTags && study.MainDicomTags.StudyInstanceUID);
-          
-          console.log("ID d'étude (objet):", id, "depuis l'objet:", study);
-          
-          // Si aucun ID n'est trouvé mais que l'objet a une propriété '0', c'est peut-être un tableau
-          if (!id && Array.isArray(study)) {
-            console.log("L'étude semble être un tableau:", study);
-            return study[0];
-          }
-          
-          return id;
-        }
-        return null;
-      }).filter(id => id !== null);
-      
-      console.log("IDs d'études extraits:", studyIds);
-      
-      // Si aucun ID n'est extrait mais que la réponse contient des données, utiliser les IDs connus
-      if (studyIds.length === 0 && response.data.length > 0) {
-        console.log("Aucun ID extrait mais données présentes, utilisation des IDs connus");
-        return [
-          "3abaec0a-ebfaaa87-f830d52b-d62df074-6a692c12",
-          "8a73b50a-7d6cfda8-a46add6d-9b169ca9-7f2f9b30"
-        ];
-      }
+      console.log("IDs d'études reçus directement du backend:", studyIds);
       
       return studyIds;
     } catch (error) {
@@ -255,47 +216,70 @@ const dicomService = {
       throw error;
     }
   },
-
+  
   // Récupérer directement une image DICOM à partir de son ID d'instance
   getInstanceImage: async (instanceId) => {
+    // Vérifier si l'ID d'instance est valide
+    if (!instanceId) {
+      console.error('ID d\'instance invalide');
+      throw new Error('ID d\'instance invalide');
+    }
+    
+    // Cache local pour éviter des requêtes répétées pour la même image
+    if (window._dicomImageCache && window._dicomImageCache[instanceId]) {
+      console.log(`Utilisation de l'image en cache pour l'instance ${instanceId}`);
+      return window._dicomImageCache[instanceId];
+    }
+    
+    // Initialiser le cache s'il n'existe pas
+    if (!window._dicomImageCache) {
+      window._dicomImageCache = {};
+    }
+    
     try {
-      console.log("Récupération directe de l'image pour l'instance:", instanceId);
+      console.log(`Récupération de l'image DICOM pour l'instance ${instanceId}`);
       
-      // Essayer d'abord de récupérer l'image au format JPEG
+      // Essayer d'abord de récupérer l'image JPEG (meilleur compromis performance/qualité)
       try {
-        const response = await axios.get(`${API_URL}/instances/${instanceId}/image`, {
-          headers: {
-            ...authHeader(),
-            'Accept': 'image/jpeg'
-          },
+        const response = await axios.get(`${API_URL}/instances/${instanceId}/image`, { 
+          headers: authHeader(),
           responseType: 'blob'
         });
-        
-        console.log("Image JPEG récupérée avec succès:", response);
-        return URL.createObjectURL(response.data);
+        const imageUrl = URL.createObjectURL(response.data);
+        window._dicomImageCache[instanceId] = imageUrl; // Mettre en cache
+        return imageUrl;
       } catch (jpegError) {
-        console.error("Erreur lors de la récupération de l'image JPEG:", jpegError);
+        console.warn(`Impossible de récupérer l'image JPEG: ${jpegError.message}`);
         
-        // Si l'image JPEG échoue, essayer la prévisualisation
+        // Essayer ensuite de récupérer l'aperçu
         try {
-          const previewResponse = await axios.get(`${API_URL}/instances/${instanceId}/preview`, {
-            headers: {
-              ...authHeader(),
-              'Accept': 'image/jpeg'
-            },
+          const previewResponse = await axios.get(`${API_URL}/instances/${instanceId}/preview`, { 
+            headers: authHeader(),
             responseType: 'blob'
           });
-          
-          console.log("Prévisualisation récupérée avec succès:", previewResponse);
-          return URL.createObjectURL(previewResponse.data);
+          const imageUrl = URL.createObjectURL(previewResponse.data);
+          window._dicomImageCache[instanceId] = imageUrl; // Mettre en cache
+          return imageUrl;
         } catch (previewError) {
-          console.error("Erreur lors de la récupération de la prévisualisation:", previewError);
-          throw new Error("Impossible de récupérer l'image DICOM sous quelque format que ce soit");
+          console.warn(`Impossible de récupérer l'aperçu: ${previewError.message}`);
+          
+          // En dernier recours, essayer le fichier DICOM brut
+          try {
+            const fileResponse = await axios.get(`${API_URL}/instances/${instanceId}/file`, { 
+              headers: authHeader(),
+              responseType: 'blob'
+            });
+            const imageUrl = URL.createObjectURL(fileResponse.data);
+            window._dicomImageCache[instanceId] = imageUrl; // Mettre en cache
+            return imageUrl;
+          } catch (fileError) {
+            throw new Error("Impossible de récupérer l'image DICOM sous aucun format");
+          }
         }
       }
     } catch (error) {
-      console.error(`Erreur lors de la récupération de l'image pour l'instance ${instanceId}:`, error);
-      throw error;
+      console.error(`Échec de récupération de l'image DICOM: ${error.message}`);
+      throw new Error(`Échec de récupération de l'image DICOM: ${error.message}`);
     }
   },
 };
