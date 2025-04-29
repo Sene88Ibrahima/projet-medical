@@ -103,3 +103,81 @@
   background-color: rgba(255, 0, 0, 0.5);
   pointer-events: none;
 }
+
+.dicom-viewer-container {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  margin: 20px;
+}
+
+.dicom-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.dicom-title {
+  font-size: 1.5rem;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.dicom-image-container {
+  position: relative;
+  min-height: 500px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f8f9fa;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.dicom-toolbar {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 8px;
+  border-radius: 30px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  display: flex;
+  gap: 8px;
+}
+
+.dicom-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.dicom-error {
+  text-align: center;
+  padding: 20px;
+  color: #dc3545;
+}
+
+.dicom-image {
+  max-width: 100%;
+  max-height: calc(100vh - 200px);
+  object-fit: contain;
+}
+
+.toolbar-button {
+  color: #2c3e50;
+  transition: all 0.2s ease;
+}
+
+.toolbar-button:hover {
+  background-color: rgba(0, 0, 0, 0.08);
+  transform: scale(1.1);
+}

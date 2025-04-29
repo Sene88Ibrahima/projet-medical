@@ -3,7 +3,29 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import axios from '../api/auth';
 import { Modal, Button, Form, Table } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  Container,
+  Grid,
+  Paper,
+  Typography,
+  TextField,
+  InputAdornment,
+  CircularProgress,
+  Fab,
+  Tooltip
+} from '@mui/material';
+import {
+  FolderOpen as FolderIcon,
+  Search as SearchIcon,
+  Visibility as ViewIcon,
+  Image as ImageIcon,
+  AccessTime as TimeIcon,
+  Event as DateIcon,
+  Person as PersonIcon,
+  Add as AddIcon
+} from '@mui/icons-material';
+import './MedicalRecordsPage.css';
 
 const MedicalRecordsPage = () => {
     const { user } = useAuth();
@@ -11,6 +33,7 @@ const MedicalRecordsPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [fetchAttempted, setFetchAttempted] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
     
     // États pour les modales
     const [showNewModal, setShowNewModal] = useState(false);
@@ -28,6 +51,8 @@ const MedicalRecordsPage = () => {
     
     // Liste fictive de patients (pour le dropdown)
     const [patients, setPatients] = useState([]);
+
+    const navigate = useNavigate();
 
     useEffect(() => {
         // Fonction pour charger les patients
@@ -216,6 +241,41 @@ const MedicalRecordsPage = () => {
         }
     };
 
+    const handleViewRecord = (recordId) => {
+        handleViewDetails(recordId);  // Appeler la fonction existante pour voir les détails
+    };
+
+    const handleViewImages = async (recordId) => {
+        try {
+            // Récupérer les détails du dossier médical pour obtenir l'ID de l'instance DICOM
+            const response = await axios.get(`/api/v1/medical-records/${recordId}`);
+            const record = response.data;
+            
+            // Vérifier si le dossier a des images médicales
+            if (record.medicalImages && record.medicalImages.length > 0) {
+                // Utiliser le premier ID d'instance DICOM disponible
+                const firstImage = record.medicalImages[0];
+                const dicomInstanceId = firstImage.orthancInstanceId;
+                
+                if (dicomInstanceId) {
+                    // Rediriger vers la page du visualiseur DICOM avec l'ID de l'instance
+                    navigate(`/patients/${record.patientId}/dicom/${dicomInstanceId}`);
+                } else {
+                    alert("Aucun ID d'instance DICOM trouvé pour cette image.");
+                }
+            } else {
+                alert("Aucune image DICOM n'est associée à ce dossier médical.");
+            }
+        } catch (error) {
+            console.error("Erreur lors de la récupération des images:", error);
+            alert("Erreur lors de l'accès aux images DICOM. Veuillez réessayer.");
+        }
+    };
+
+    const filteredRecords = records.filter((record) =>
+        record.patientName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     // Afficher un spinner pendant le chargement
     if (loading && !error) {
         return (
@@ -246,72 +306,117 @@ const MedicalRecordsPage = () => {
     }
 
     return (
-        <div className="container mt-4">
-            <h2>Dossiers médicaux</h2>
-
-            {user?.role === 'DOCTOR' && (
-                <div className="d-flex justify-content-end mb-3">
-                    <button className="btn btn-primary" onClick={() => setShowNewModal(true)}>
-                        Nouveau dossier médical
-                    </button>
+        <div className="medical-records-page">
+            <Container maxWidth="lg">
+                <div className="page-header">
+                    <Typography variant="h4" component="h1" gutterBottom>
+                        Dossiers Médicaux
+                    </Typography>
                 </div>
-            )}
 
-            {records.length > 0 ? (
-                <div className="card">
-                    <div className="card-body">
-                        <div className="table-responsive">
-                            <Table striped bordered hover>
-                                <thead>
-                                    <tr>
-                                        <th>Patient</th>
-                                        <th>Diagnostic</th>
-                                        <th>Traitement</th>
-                                        <th>Date de création</th>
-                                        <th>Images</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {records.map((record) => (
-                                        <tr key={record.id}>
-                                            <td>{record.patientName}</td>
-                                            <td>{record.diagnosis}</td>
-                                            <td>{record.treatment}</td>
-                                            <td>{new Date(record.createdAt).toLocaleDateString()}</td>
-                                            <td>{record.imageCount}</td>
-                                            <td>
-                                                <Button
-                                                    variant="info"
-                                                    size="sm"
-                                                    onClick={() => handleViewDetails(record.id)}
-                                                    className="me-2"
-                                                >
-                                                    Voir
-                                                </Button>
-                                                {user?.role === 'DOCTOR' && (
-                                                    <Button
-                                                        variant="danger"
-                                                        size="sm"
-                                                        onClick={() => handleDeleteRecord(record.id)}
-                                                    >
-                                                        Supprimer
-                                                    </Button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </Table>
-                        </div>
+                <div className="search-bar">
+                    <TextField
+                        fullWidth
+                        variant="outlined"
+                        placeholder="Rechercher un dossier médical..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="search-field"
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <SearchIcon color="action" />
+                                </InputAdornment>
+                            ),
+                        }}
+                    />
+                </div>
+
+                {loading ? (
+                    <div className="loading-container">
+                        <CircularProgress className="loading-spinner" />
                     </div>
-                </div>
-            ) : (
-                <div className="alert alert-info">
-                    Aucun dossier médical disponible.
-                </div>
-            )}
-            
+                ) : (
+                    <div className="records-container">
+                        <Grid container spacing={3}>
+                            {filteredRecords.map((record) => (
+                                <Grid item xs={12} sm={6} md={4} key={record.id}>
+                                    <Paper className="record-card">
+                                        <div className="record-card-content">
+                                            <div className="record-header">
+                                                <FolderIcon className="record-icon" />
+                                                <div>
+                                                    <Typography className="record-title">
+                                                        {record.patientName}
+                                                    </Typography>
+                                                    <div className="record-info">
+                                                        <Typography variant="body2" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                                            <PersonIcon fontSize="small" />
+                                                            ID: {record.patientId}
+                                                        </Typography>
+                                                        <Typography variant="body2" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                                            <DateIcon fontSize="small" />
+                                                            Date: {new Date(record.createdAt).toLocaleDateString()}
+                                                        </Typography>
+                                                        <Typography variant="body2" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                            <TimeIcon fontSize="small" />
+                                                            Dernière mise à jour: {new Date(record.updatedAt).toLocaleDateString()}
+                                                        </Typography>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="record-actions">
+                                                <Button
+                                                    variant="contained"
+                                                    className="action-button view-button"
+                                                    onClick={() => handleViewRecord(record.id)}
+                                                    startIcon={<ViewIcon />}
+                                                >
+                                                    Détails
+                                                </Button>
+                                                <Button
+                                                    variant="contained"
+                                                    className="action-button images-button"
+                                                    onClick={() => handleViewImages(record.id)}
+                                                    startIcon={<ImageIcon />}
+                                                    disabled={!record.medicalImages || record.medicalImages.length === 0}
+                                                >
+                                                    Images
+                                                </Button>
+                                            </div>
+
+                                            <div className={`status-chip ${record.status === 'active' ? 'status-active' : 'status-completed'}`}>
+                                                {record.status === 'active' ? 'En cours' : 'Terminé'}
+                                            </div>
+                                        </div>
+                                    </Paper>
+                                </Grid>
+                            ))}
+                        </Grid>
+                    </div>
+                )}
+
+                {/* Bouton flottant pour ajouter un nouveau dossier médical */}
+                {user?.role === 'DOCTOR' && (
+                    <Tooltip title="Nouveau dossier médical" placement="left">
+                        <Fab 
+                            color="primary" 
+                            className="add-record-button"
+                            onClick={() => setShowNewModal(true)}
+                            sx={{
+                                position: 'fixed',
+                                bottom: 32,
+                                right: 32,
+                                zIndex: 1000
+                            }}
+                        >
+                            <AddIcon />
+                        </Fab>
+                    </Tooltip>
+                )}
+            </Container>
+
             {/* Modal pour créer un nouveau dossier médical */}
             <Modal show={showNewModal} onHide={() => setShowNewModal(false)} size="lg">
                 <Modal.Header closeButton>
@@ -373,14 +478,22 @@ const MedicalRecordsPage = () => {
                                 onChange={handleFileChange}
                             />
                             <Form.Text className="text-muted">
-                                Vous pouvez sélectionner plusieurs fichiers.
+                                Vous pouvez sélectionner plusieurs fichiers DICOM.
                             </Form.Text>
                         </Form.Group>
                         <div className="d-flex justify-content-end">
-                            <Button variant="secondary" className="me-2" onClick={() => setShowNewModal(false)}>
+                            <Button 
+                                variant="outlined" 
+                                onClick={() => setShowNewModal(false)}
+                                sx={{ mr: 1 }}
+                            >
                                 Annuler
                             </Button>
-                            <Button variant="primary" type="submit">
+                            <Button 
+                                variant="contained" 
+                                color="primary" 
+                                type="submit"
+                            >
                                 Créer le dossier médical
                             </Button>
                         </div>

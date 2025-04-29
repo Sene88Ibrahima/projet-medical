@@ -208,3 +208,137 @@
   font-size: 12px;
   color: #6c757d;
 }
+
+.dicom-viewer-page {
+  min-height: 100vh;
+  background: linear-gradient(to bottom right, #f8f9fa, #e9ecef);
+  padding: 20px 0;
+}
+
+.study-list-paper {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.study-list-paper:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
+}
+
+.study-item {
+  transition: background-color 0.2s ease;
+  border-radius: 4px;
+  margin: 4px 0;
+}
+
+.study-item:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.study-item.selected {
+  background-color: rgba(25, 118, 210, 0.08);
+  border-left: 4px solid #1976d2;
+}
+
+.dicom-viewer-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.dicom-viewer-container:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.report-container {
+  animation: slideIn 0.5s ease-out;
+}
+
+.observation-item {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.observation-item:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.save-button {
+  transition: all 0.3s ease !important;
+}
+
+.save-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Loading animation */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Alert animations */
+.alert-fade {
+  animation: alertSlideIn 0.3s ease-out;
+}
+
+@keyframes alertSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 960px) {
+  .dicom-viewer-page {
+    padding: 10px;
+  }
+  
+  .study-list-paper {
+    margin-bottom: 20px;
+  }
+}

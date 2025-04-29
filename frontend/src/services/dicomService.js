@@ -282,6 +282,35 @@ const dicomService = {
       throw new Error(`Échec de récupération de l'image DICOM: ${error.message}`);
     }
   },
+
+  // Sauvegarder un rapport médical
+  saveReport: async (reportData) => {
+    try {
+      const response = await axios.post(
+        `${API_URL}/reports`, 
+        reportData,
+        { headers: authHeader() }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Erreur lors de la sauvegarde du rapport:", error);
+      throw error;
+    }
+  },
+
+  // Récupérer les rapports pour une instance
+  getReports: async (instanceId) => {
+    try {
+      const response = await axios.get(
+        `${API_URL}/reports/instance/${instanceId}`,
+        { headers: authHeader() }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Erreur lors de la récupération des rapports:", error);
+      throw error;
+    }
+  },
 };
 
 export default dicomService;

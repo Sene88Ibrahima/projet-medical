@@ -1,0 +1,246 @@
+.medical-records-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+  padding: 2rem 0;
+  position: relative;
+}
+
+.page-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  animation: slideDown 0.6s ease-out;
+}
+
+.records-container {
+  animation: fadeIn 0.8s ease-out;
+}
+
+.record-card {
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.record-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+}
+
+.record-card-content {
+  padding: 1.5rem;
+}
+
+.record-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.record-icon {
+  color: #2196f3;
+  font-size: 2rem !important;
+  transition: transform 0.3s ease;
+}
+
+.record-card:hover .record-icon {
+  transform: scale(1.1);
+}
+
+.record-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1a237e;
+  margin: 0;
+}
+
+.record-info {
+  color: #546e7a;
+  margin: 0.5rem 0;
+}
+
+.record-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s ease;
+}
+
+.record-card:hover .record-actions {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.action-button {
+  padding: 8px 16px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  text-transform: none;
+}
+
+.view-button {
+  background-color: #2196f3 !important;
+  color: white !important;
+}
+
+.view-button:hover {
+  background-color: #1976d2 !important;
+  transform: scale(1.05);
+}
+
+.images-button {
+  background-color: #4caf50 !important;
+  color: white !important;
+}
+
+.images-button:hover {
+  background-color: #388e3c !important;
+  transform: scale(1.05);
+}
+
+.status-chip {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  border-radius: 12px;
+  padding: 4px 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.status-active {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.status-completed {
+  background-color: #e8f5e9;
+  color: #388e3c;
+}
+
+.search-bar {
+  margin-bottom: 2rem;
+  animation: slideDown 0.6s ease-out;
+}
+
+.search-field {
+  background-color: white;
+  border-radius: 25px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Animations */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  .medical-records-page {
+    padding: 1rem;
+  }
+
+  .record-actions {
+    flex-direction: column;
+  }
+
+  .action-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Loading Animation */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Floating Add Button */
+.add-record-button {
+  transition: all 0.3s ease !important;
+}
+
+.add-record-button:hover {
+  transform: scale(1.1) !important;
+  box-shadow: 0 8px 16px rgba(33, 150, 243, 0.3) !important;
+}
+
+/* Modal Styles */
+.modal-content {
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+}
+
+.modal-header {
+  background-color: #f8f9fa;
+  border-bottom: none !important;
+  padding: 1.5rem !important;
+}
+
+.modal-body {
+  padding: 1.5rem !important;
+}
+
+.modal-footer {
+  border-top: none !important;
+  padding: 1.5rem !important;
+}
+
+.form-control, .form-select {
+  border-radius: 8px !important;
+  border: 1px solid #e0e0e0 !important;
+  padding: 0.75rem !important;
+  transition: all 0.3s ease !important;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: #2196f3 !important;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2) !important;
+}
+
+.form-label {
+  font-weight: 500;
+  color: #1a237e;
+  margin-bottom: 0.5rem;
+} 
