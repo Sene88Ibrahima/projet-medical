@@ -22,7 +22,7 @@ import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import DownloadIcon from '@mui/icons-material/Download';
 import InfoIcon from '@mui/icons-material/Info';
 import dicomService from '../../services/dicomService';
-import './DicomViewer.css';
+import '../common/styles.css';
 
 const DicomViewer = ({ instanceId, onAnnotationChange }) => {
   const viewerRef = useRef(null);
@@ -257,166 +257,81 @@ const DicomViewer = ({ instanceId, onAnnotationChange }) => {
 
   // Afficher le composant
   return (
-    <Card elevation={3}>
-      <CardContent>
-        {/* Contenu à afficher uniquement si chargé ou erreur */}
-        {(loading || error || instance || !instanceId) && (
-          <Box sx={{ position: 'relative' }}>
-            {/* Barre d'outils en haut */}
-            <Paper 
-              elevation={0} 
-              sx={{ 
-                p: 1, 
-                mb: 2, 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                backgroundColor: '#f8f9fa'
-              }}
-            >
-              <ButtonGroup variant="outlined" size="small">
-                <Tooltip title="Zoom avant">
-                  <IconButton onClick={handleZoomIn} disabled={!instance}>
-                    <ZoomInIcon />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Zoom arrière">
-                  <IconButton onClick={handleZoomOut} disabled={!instance}>
-                    <ZoomOutIcon />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Rotation gauche">
-                  <IconButton onClick={handleRotateLeft} disabled={!instance}>
-                    <RotateLeftIcon />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Rotation droite">
-                  <IconButton onClick={handleRotateRight} disabled={!instance}>
-                    <RotateRightIcon />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Réinitialiser">
-                  <IconButton onClick={handleReset} disabled={!instance}>
-                    <RestartAltIcon />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Télécharger">
-                  <IconButton onClick={handleDownload} disabled={!instanceId}>
-                    <DownloadIcon />
-                  </IconButton>
-                </Tooltip>
-              </ButtonGroup>
-              
-              <Tooltip title="Informations de débogage">
-                <IconButton 
-                  onClick={() => setShowDebug(prev => !prev)} 
-                  color={showDebug ? "primary" : "default"}
-                >
-                  <InfoIcon />
-                </IconButton>
-              </Tooltip>
-              
-              {/* Slider de zoom */}
-              <Box sx={{ width: 200, ml: 2, display: instance ? 'block' : 'none' }}>
-                <Typography id="zoom-slider" gutterBottom variant="caption">
-                  Zoom: {zoom}%
-                </Typography>
-                <Slider
-                  value={zoom}
-                  min={50}
-                  max={200}
-                  step={5}
-                  onChange={(e, newValue) => setZoom(newValue)}
-                  aria-labelledby="zoom-slider"
-                  size="small"
-                />
-              </Box>
-            </Paper>
-            
-            {/* Conteneur d'affichage de l'image */}
-            <Paper 
-              elevation={2} 
-              sx={{ 
-                p: 1, 
-                mb: 2, 
-                height: 500,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative', // Important pour positionner les éléments enfants
-                overflow: 'hidden' // Éviter débordement des images
-              }}
-            >
-              {/* Zone de visualisation - TOUJOURS PRÉSENTE même avec loading/error */}
-              <div 
-                ref={viewerRef} 
-                className="dicom-viewer-container" 
-                style={{ 
-                  width: '100%', 
-                  height: '100%',
-                  position: 'absolute', // Positionnement absolu pour garantir présence
-                  top: 0,
-                  left: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              />
-              
-              {/* Superposition des états (loading, error) par-dessus le container */}
-              {loading && (
-                <div style={{zIndex: 10, position: 'absolute', backgroundColor: 'rgba(255,255,255,0.7)'}}>
-                  <CircularProgress />
-                </div>
-              )}
-              
-              {error && (
-                <Alert severity="error" sx={{ width: '80%', zIndex: 10, position: 'absolute' }}>
-                  {error}
-                </Alert>
-              )}
-              
-              {!instance && !loading && !error && (
-                <Typography variant="body1" color="text.secondary">
-                  Sélectionnez une image à visualiser
-                </Typography>
-              )}
-            </Paper>
-            
-            {/* Informations sur l'image */}
-            {instance && (
-              <Paper elevation={0} sx={{ p: 2, backgroundColor: '#f8f9fa' }}>
-                <Typography variant="subtitle2" gutterBottom>Informations sur l'image</Typography>
-                <Grid container spacing={2}>
-                  <Grid item>
-                    <Typography variant="body2">Dimensions: {instance.width || '?'} x {instance.height || '?'} px</Typography>
-                  </Grid>
-                  <Grid item>
-                    <Typography variant="body2">Zoom: {zoom}%</Typography>
-                  </Grid>
-                  <Grid item>
-                    <Typography variant="body2">Rotation: {rotation}°</Typography>
-                  </Grid>
-                </Grid>
-              </Paper>
-            )}
-            
-            {/* Section de débogage */}
-            {showDebug && (
-              <Alert severity="info" sx={{ mt: 2 }}>
-                <Typography variant="subtitle2" gutterBottom>Informations de débogage</Typography>
-                <Typography variant="body2">Instance ID: {debugInfo.instanceId || instanceId}</Typography>
-                <Typography variant="body2">URL de l'image: {debugInfo.imageUrl}</Typography>
-                <Typography variant="body2">URL du fichier DICOM: {debugInfo.fileUrl}</Typography>
-                <Typography variant="body2">URL de prévisualisation: {debugInfo.previewUrl}</Typography>
-                <Typography variant="body2">Horodatage: {debugInfo.timestamp}</Typography>
-                <Typography variant="body2">État: {loading ? 'Chargement' : error ? 'Erreur' : instance ? 'Image chargée' : 'Aucune image'}</Typography>
-              </Alert>
-            )}
+    <Paper className="medical-container">
+      <div className="medical-header">
+        <Typography variant="h6" className="medical-title">
+          Visualisation DICOM
+        </Typography>
+        <div className="medical-controls">
+          <Tooltip title="Télécharger">
+            <IconButton onClick={handleDownload} color="primary">
+              <DownloadIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Informations">
+            <IconButton onClick={() => setShowDebug(!showDebug)} color="primary">
+              <InfoIcon />
+            </IconButton>
+          </Tooltip>
+        </div>
+      </div>
+
+      <div className="dicom-viewer" ref={viewerRef}>
+        {loading && (
+          <Box className="dicom-loading">
+            <CircularProgress />
+            <Typography variant="body1" style={{ marginLeft: 16 }}>
+              Chargement de l'image...
+            </Typography>
           </Box>
         )}
-      </CardContent>
-    </Card>
+
+        {error && (
+          <Box className="dicom-error">
+            <Typography variant="body1" color="error">
+              {error}
+            </Typography>
+          </Box>
+        )}
+
+        <div className="dicom-toolbar">
+          <Tooltip title="Zoom +">
+            <IconButton onClick={handleZoomIn} color="inherit">
+              <ZoomInIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Zoom -">
+            <IconButton onClick={handleZoomOut} color="inherit">
+              <ZoomOutIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Rotation gauche">
+            <IconButton onClick={handleRotateLeft} color="inherit">
+              <RotateLeftIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Rotation droite">
+            <IconButton onClick={handleRotateRight} color="inherit">
+              <RotateRightIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Réinitialiser">
+            <IconButton onClick={handleReset} color="inherit">
+              <RestartAltIcon />
+            </IconButton>
+          </Tooltip>
+        </div>
+
+        {showDebug && (
+          <Paper className="medical-container" style={{ marginTop: 16 }}>
+            <Typography variant="h6">Informations de débogage</Typography>
+            <pre style={{ whiteSpace: 'pre-wrap' }}>
+              {JSON.stringify(debugInfo, null, 2)}
+            </pre>
+          </Paper>
+        )}
+      </div>
+    </Paper>
   );
 };
 
