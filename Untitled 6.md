@@ -148,3 +148,19 @@ Le processus de création des dossiers médicaux implique principalement les ent
 - [React Official Documentation](https://reactjs.org/docs/getting-started.html)
 - [Orthanc Server User Manual](https://book.orthanc-server.com/users/rest.html)
 - [PostgreSQL Official Documentation](https://www.postgresql.org/docs/)
+
+Uncaught runtime errors:
+×
+ERROR
+Failed to execute 'removeChild' on 'Node': The node to be removed is not a child of this node.
+NotFoundError: Failed to execute 'removeChild' on 'Node': The node to be removed is not a child of this node.
+    at removeChild (http://localhost:3000/static/js/bundle.js:61880:20)
+    at runWithFiberInDEV (http://localhost:3000/static/js/bundle.js:52626:14)
+    at commitDeletionEffectsOnFiber (http://localhost:3000/static/js/bundle.js:58210:11)
+    at recursivelyTraverseDeletionEffects (http://localhost:3000/static/js/bundle.js:58170:51)
+    at commitDeletionEffectsOnFiber (http://localhost:3000/static/js/bundle.js:58233:9)
+    at recursivelyTraverseDeletionEffects (http://localhost:3000/static/js/bundle.js:58170:51)
+    at commitDeletionEffectsOnFiber (http://localhost:3000/static/js/bundle.js:58233:9)
+    at recursivelyTraverseMutationEffects (http://localhost:3000/static/js/bundle.js:58315:7)
+    at commitMutationEffectsOnFiber (http://localhost:3000/static/js/bundle.js:58412:9)
+    at recursivelyTraverseMutationEffects (http://localhost:3000/static/js/bundle.js:58323:104)
