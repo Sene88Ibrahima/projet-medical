@@ -90,7 +90,9 @@ export const AuthProvider = ({ children }) => {
                     email: email,
                     firstName: response.firstName || '',
                     lastName: response.lastName || '',
-                    role: response.role || 'PATIENT'
+                    role: response.role || 'PATIENT',
+                    dashboardUrl: response.dashboardUrl || '/dashboard',
+                    medicalInfoCompleted: response.medicalInfoCompleted ?? false
                 };
                 
                 // Stocker l'utilisateur dans localStorage et le state
@@ -133,7 +135,9 @@ export const AuthProvider = ({ children }) => {
                     email: userData.email,
                     firstName: userData.firstName || '',
                     lastName: userData.lastName || '',
-                    role: userData.role || 'PATIENT'
+                    role: userData.role || 'PATIENT',
+                    dashboardUrl: response.dashboardUrl || '/dashboard',
+                    medicalInfoCompleted: response.medicalInfoCompleted ?? false
                 };
                 
                 // Stocker l'utilisateur dans localStorage et le state

@@ -2,20 +2,24 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { FaUser, FaCog, FaSignOutAlt, FaUserMd, FaUserCog, FaUserNurse, FaHome } from 'react-icons/fa';
+import { FaUser, FaCog, FaSignOutAlt, FaUserMd, FaUserCog, FaUserNurse, FaHome, FaUsers } from 'react-icons/fa';
 import './Navbar.css';
 
 const Navbar = () => {
     const { user, logout, loading } = useAuth();
+    // Pour éviter les problèmes de rendu initial (user null), récupérons aussi l'utilisateur du localStorage
+    const storedUserStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+    const storedUser = storedUserStr ? JSON.parse(storedUserStr) : null;
+    const currentUser = user || storedUser;
     const navigate = useNavigate();
     const location = useLocation();
     const dropdownRef = useRef(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     
     // Utiliser directement l'état du contexte d'authentification
-    const isAuthenticated = !!user;
+    const isAuthenticated = !!currentUser;
     
-    console.log("Navbar: état d'authentification =", isAuthenticated, "utilisateur =", user?.email || 'non défini');
+    console.log("Navbar: état d'authentification =", isAuthenticated, "utilisateur =", currentUser?.email || 'non défini');
     
     // Initialiser manuellement le dropdown Bootstrap
     useEffect(() => {
@@ -72,9 +76,9 @@ const Navbar = () => {
 
     // Déterminer le lien du tableau de bord en fonction du rôle
     const getDashboardLink = () => {
-        if (!user) return '/dashboard';
+        if (!currentUser) return '/dashboard';
         
-        switch (user.role) {
+        switch (currentUser.role) {
             case 'ADMIN':
                 return '/dashboard/admin';
             case 'DOCTOR':
@@ -90,9 +94,9 @@ const Navbar = () => {
 
     // Obtenir l'icône correspondant au rôle de l'utilisateur
     const getUserIcon = () => {
-        if (!user) return <FaUser />;
+        if (!currentUser) return <FaUser />;
         
-        switch (user.role) {
+        switch (currentUser.role) {
             case 'ADMIN':
                 return <FaUserCog />;
             case 'DOCTOR':
@@ -105,25 +109,16 @@ const Navbar = () => {
     };
 
     return (
-        <nav className="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
+        <nav className="navbar navbar-expand navbar-light bg-light shadow-sm">
             <div className="container">
                 <Link className="navbar-brand d-flex align-items-center" to="/">
                     <FaHome className="me-2" />
-                    MediConnect
+                    DiagnoPlus
                 </Link>
 
-                <button
-                    className="navbar-toggler"
-                    type="button"
-                    onClick={toggleMenu}
-                    aria-controls="navbarNav"
-                    aria-expanded={isMenuOpen ? "true" : "false"}
-                    aria-label="Toggle navigation"
-                >
-                    <span className="navbar-toggler-icon"></span>
-                </button>
+                
 
-                <div className={`collapse navbar-collapse ${isMenuOpen ? 'show' : ''}`} id="navbarNav">
+                <div className="navbar-collapse flex-grow-1 justify-content-end" id="navbarNav">
                     <ul className="navbar-nav ms-auto">
                         <li className="nav-item">
                             <Link className="nav-link" to="/">
@@ -131,7 +126,7 @@ const Navbar = () => {
                             </Link>
                         </li>
 
-                        {isAuthenticated && user ? (
+                        {isAuthenticated && currentUser ? (
                             <>
                                 <li className="nav-item">
                                     <Link className="nav-link" to={getDashboardLink()}>
@@ -139,23 +134,59 @@ const Navbar = () => {
                                     </Link>
                                 </li>
 
-                                <li className="nav-item">
-                                    <Link className="nav-link" to="/appointments">
-                                        Rendez-vous
-                                    </Link>
-                                </li>
+                                {/* Articles for specific roles */}
+                                {currentUser.role === 'DOCTOR' && (
+                                    <li className="nav-item">
+                                        <Link className="nav-link" to="/articles">
+                                            Articles
+                                        </Link>
+                                    </li>
+                                )}
+                                {currentUser.role === 'ADMIN' && (
+                                    <li className="nav-item">
+                                        <Link className="nav-link" to="/admin/articles">
+                                            Les Articles
+                                        </Link>
+                                    </li>
+                                )}
 
-                                <li className="nav-item">
-                                    <Link className="nav-link" to="/medical-records">
-                                        Dossiers médicaux
-                                    </Link>
-                                </li>
+                                {currentUser.role !== 'ADMIN' && (
+                                    <li className="nav-item">
+                                        <Link className="nav-link" to="/appointments">
+                                            Rendez-vous
+                                        </Link>
+                                    </li>
+                                )}
 
-                                <li className="nav-item">
-                                    <Link className="nav-link" to="/messages">
-                                        Messages
-                                    </Link>
-                                </li>
+                                {currentUser.role === 'ADMIN' ? (
+                                    <li className="nav-item">
+                                        <Link className="nav-link" to="/admin/medical-records">
+                                            Dossiers médicaux
+                                        </Link>
+                                    </li>
+                                ) : (
+                                    <li className="nav-item">
+                                        <Link className="nav-link" to="/medical-records">
+                                            Dossiers médicaux
+                                        </Link>
+                                    </li>
+                                )}
+
+                                {currentUser.role !== 'ADMIN' && (
+                                    <li className="nav-item">
+                                        <Link className="nav-link" to="/messages">
+                                            Messages
+                                        </Link>
+                                    </li>
+                                )}
+
+                                {currentUser.role === 'ADMIN' && (
+                                    <li className="nav-item">
+                                        <Link className="nav-link" to="/admin/users">
+                                            <FaUsers className="me-1" /> Utilisateurs
+                                        </Link>
+                                    </li>
+                                )}
 
                                 {/* Menu déroulant utilisateur */}
                                 <li className="nav-item dropdown">
@@ -171,7 +202,7 @@ const Navbar = () => {
                                         <span className="user-icon me-1">
                                             {getUserIcon()}
                                         </span>
-                                        {user?.firstName || ''} {user?.lastName || ''}
+                                        {currentUser?.firstName || ''} {currentUser?.lastName || ''}
                                     </a>
                                     <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
                                         <li>

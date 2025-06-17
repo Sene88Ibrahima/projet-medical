@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import { createUser } from '../../api/admin';
 
 const CreateUserForm = () => {
     const [formData, setFormData] = useState({
@@ -33,7 +33,8 @@ const CreateUserForm = () => {
             return;
         }
 
-        if (formData.password.length < 6) {
+        // Le backend impose une longueur minimale de 8 caractères
+    if (formData.password.length < 8) {
             setError('Le mot de passe doit contenir au moins 6 caractères');
             return;
         }
@@ -41,18 +42,9 @@ const CreateUserForm = () => {
         setIsLoading(true);
 
         try {
-            const token = localStorage.getItem('token');
             const { confirmPassword, ...userData } = formData;
             
-            const response = await axios.post(
-                '/api/v1/admin/users', 
-                userData,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                }
-            );
+            const response = await createUser(userData);
             
             console.log('User creation successful:', response.data);
             setSuccess(`L'utilisateur ${userData.firstName} ${userData.lastName} (${userData.role}) a été créé avec succès.`);
@@ -68,14 +60,18 @@ const CreateUserForm = () => {
             });
         } catch (err) {
             console.error('User creation failed:', err);
-            setError(err.response?.data?.message || 'Échec de la création de l\'utilisateur. Veuillez réessayer.');
+            // Si le backend renvoie une liste d'erreurs de validation, agréger les messages
+        const backendMessage = Array.isArray(err.response?.data?.errors)
+            ? err.response.data.errors.map(e => e.defaultMessage).join('\n')
+            : err.response?.data?.message;
+        setError(backendMessage || "Échec de la création de l'utilisateur. Veuillez réessayer.");
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <div className="card">
+        <div className="card admin-card">
             <div className="card-header">
                 <h3>Créer un nouvel utilisateur</h3>
             </div>
@@ -87,7 +83,7 @@ const CreateUserForm = () => {
                     <div className="row">
                         <div className="col-md-6">
                             <div className="form-group mb-3">
-                                <label htmlFor="firstName">Prénom</label>
+                                <label className="small" htmlFor="firstName">Prénom</label>
                                 <input
                                     type="text"
                                     id="firstName"
@@ -103,7 +99,7 @@ const CreateUserForm = () => {
 
                         <div className="col-md-6">
                             <div className="form-group mb-3">
-                                <label htmlFor="lastName">Nom</label>
+                                <label className="small" htmlFor="lastName">Nom</label>
                                 <input
                                     type="text"
                                     id="lastName"
@@ -119,7 +115,7 @@ const CreateUserForm = () => {
                     </div>
 
                     <div className="form-group mb-3">
-                        <label htmlFor="email">Email</label>
+                        <label className="small" htmlFor="email">Email</label>
                         <input
                             type="email"
                             id="email"
@@ -135,7 +131,7 @@ const CreateUserForm = () => {
                     <div className="row">
                         <div className="col-md-6">
                             <div className="form-group mb-3">
-                                <label htmlFor="password">Mot de passe</label>
+                                <label className="small" htmlFor="password">Mot de passe</label>
                                 <input
                                     type="password"
                                     id="password"
@@ -151,7 +147,7 @@ const CreateUserForm = () => {
 
                         <div className="col-md-6">
                             <div className="form-group mb-3">
-                                <label htmlFor="confirmPassword">Confirmer le mot de passe</label>
+                                <label className="small" htmlFor="confirmPassword">Confirmer le mot de passe</label>
                                 <input
                                     type="password"
                                     id="confirmPassword"
@@ -167,7 +163,7 @@ const CreateUserForm = () => {
                     </div>
 
                     <div className="form-group mb-3">
-                        <label htmlFor="role">Rôle</label>
+                        <label className="small" htmlFor="role">Rôle</label>
                         <select
                             id="role"
                             name="role"

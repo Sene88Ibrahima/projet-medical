@@ -1,5 +1,6 @@
 // src/pages/DashboardPage.js
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth, isAuthenticated } from '../context/AuthContext';
 import axios from '../api/auth';
 import { FaCalendarAlt, FaUserMd, FaUser, FaClipboardList, FaEnvelope, FaChartBar, FaExclamationTriangle, FaRegClock } from 'react-icons/fa';
@@ -13,10 +14,11 @@ const DashboardPage = () => {
     const [stats, setStats] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const navigate = useNavigate();
     
-    // Fonction de navigation directe pour éviter les redirections indésirables
+    // Navigation SPA sans rechargement complet
     const handleNavigation = (path) => {
-        window.location.href = path;
+        navigate(path);
     };
     
     // Effet pour vérifier l'authentification à chaque chargement du dashboard

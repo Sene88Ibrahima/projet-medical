@@ -7,11 +7,11 @@ const Footer = () => {
             <div className="container">
                 <div className="row">
                     <div className="col-md-6">
-                        <h5>MediConnect</h5>
+                        <h5>DiagnoPlus</h5>
                         <p className="text-muted">Plateforme de santé pour simplifier la relation médecin-patient</p>
                     </div>
                     <div className="col-md-6 text-md-end">
-                        <p>&copy; {new Date().getFullYear()} MediConnect. Tous droits réservés.</p>
+                        <p>&copy; {new Date().getFullYear()} DiagnoPlus. Tous droits réservés.</p>
                     </div>
                 </div>
             </div>

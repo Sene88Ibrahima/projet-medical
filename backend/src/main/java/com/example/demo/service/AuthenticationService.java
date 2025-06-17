@@ -12,6 +12,8 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.example.demo.service.EmailService;
+import com.example.demo.model.AccountStatus;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +23,7 @@ public class AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final EmailService emailService;
 
     public AuthenticationResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -34,9 +37,13 @@ public class AuthenticationService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.PATIENT) // Forcer le rôle PATIENT pour l'inscription publique
+                .status(AccountStatus.SUSPENDED)
                 .build();
 
         userRepository.save(user);
+        // Send activation email
+        String activationLink = "http://localhost:8080/api/v1/auth/activate?email=" + user.getEmail();
+        emailService.sendSimpleMessage(user.getEmail(), "Activation de votre compte", "Merci de cliquer sur le lien suivant pour activer votre compte: " + activationLink);
 
         var jwtToken = jwtService.generateToken(user);
 
@@ -44,12 +51,23 @@ public class AuthenticationService {
 
         return AuthenticationResponse.builder()
                 .token(jwtToken)
+                .id(user.getId())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .email(user.getEmail())
                 .role(user.getRole().name())
                 .dashboardUrl(dashboardUrl)
                 .build();
+    }
+
+    public void activateAccount(String email) {
+        var user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+        if (user.getStatus() == AccountStatus.ACTIVE) {
+            return; // déjà activé
+        }
+        user.setStatus(AccountStatus.ACTIVE);
+        userRepository.save(user);
     }
 
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
@@ -69,6 +87,7 @@ public class AuthenticationService {
 
         return AuthenticationResponse.builder()
                 .token(jwtToken)
+                .id(user.getId())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .email(user.getEmail())

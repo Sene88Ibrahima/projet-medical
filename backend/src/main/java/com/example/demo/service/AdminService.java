@@ -5,18 +5,23 @@ import com.example.demo.dto.UserDTO;
 import com.example.demo.model.AppointmentStatus;
 import com.example.demo.model.Role;
 import com.example.demo.model.User;
+import com.example.demo.model.AccountStatus;
 import com.example.demo.repository.AppointmentRepository;
 import com.example.demo.repository.MedicalImageRepository;
 import com.example.demo.repository.MedicalRecordRepository;
 import com.example.demo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class AdminService {
 
@@ -48,6 +53,11 @@ public class AdminService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
 
+        // Vérifier unicité de l'email si modifié
+        if (!user.getEmail().equals(userDTO.getEmail()) && userRepository.existsByEmail(userDTO.getEmail())) {
+            throw new RuntimeException("Email déjà utilisé");
+        }
+
         user.setFirstName(userDTO.getFirstName());
         user.setLastName(userDTO.getLastName());
         user.setEmail(userDTO.getEmail());
@@ -58,10 +68,19 @@ public class AdminService {
     }
 
     public void deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
-            throw new RuntimeException("Utilisateur non trouvé");
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+
+        boolean hasDependencies = !user.getDoctorAppointments().isEmpty()
+                || !user.getPatientAppointments().isEmpty()
+                || !user.getMedicalRecords().isEmpty();
+
+        if (hasDependencies) {
+            // Suspension au lieu de suppression pour préserver l'intégrité
+            changeStatus(id, AccountStatus.SUSPENDED);
+        } else {
+            userRepository.delete(user);
         }
-        userRepository.deleteById(id);
     }
 
     public AdminDashboardStats getDashboardStats() {
@@ -102,6 +121,23 @@ public class AdminService {
         
         User savedUser = userRepository.save(user);
         return mapToUserDTO(savedUser);
+    }
+
+    /**
+     * Change le statut d'un compte (activation / suspension)
+     */
+    public void changeStatus(Long id, AccountStatus status) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+
+        // Empêcher un admin de se désactiver lui-même
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getName().equals(user.getEmail()) && status == AccountStatus.SUSPENDED) {
+            throw new RuntimeException("Impossible de suspendre son propre compte");
+        }
+
+        user.setStatus(status);
+        userRepository.save(user);
     }
 
     private UserDTO mapToUserDTO(User user) {

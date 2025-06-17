@@ -11,7 +11,7 @@ const HomePage = () => {
         <div className="home-page">
             <div className="hero-section">
                 <div className="container">
-                    <h1>MediConnect</h1>
+                    <h1>DiagnoPlus</h1>
                     <p className="lead">
                         La plateforme innovante qui simplifie la relation médecin-patient et améliore votre expérience de santé
                     </p>
@@ -27,7 +27,7 @@ const HomePage = () => {
                         </div>
                     ) : (
                         <div className="welcome-back">
-                            <p>Bienvenue, {currentUser.firstName}!</p>
+                            <p>Bienvenue sur DiagnoPlus, {currentUser.firstName}!</p>
                             <Link to="/dashboard" className="btn btn-success btn-lg">
                                 Accéder à mon tableau de bord
                             </Link>
@@ -66,7 +66,7 @@ const HomePage = () => {
                                 <i className="fas fa-comments fa-3x mb-3"></i>
                                 <h3>Messagerie sécurisée</h3>
                                 <p>
-                                    Communiquez directement avec votre médecin ou vos patients via notre système de messagerie cryptée.
+                                    Rejoignez DiagnoPlus pour communiquer directement avec votre médecin ou vos patients via notre système de messagerie cryptée.
                                 </p>
                             </div>
                         </div>

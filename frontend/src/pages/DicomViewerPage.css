@@ -147,10 +147,25 @@
 }
 
 .report-container, .annotations-container {
-  background-color: #f8f9fa;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 15px;
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  min-height: 75vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.report-container {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+  min-height: 75vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .report-textarea {
@@ -211,19 +226,20 @@
 
 .dicom-viewer-page {
   min-height: 100vh;
-  background: linear-gradient(to bottom right, #f8f9fa, #e9ecef);
-  padding: 20px 0;
+  background: linear-gradient(135deg, #f0f2f5 0%, #e6e9ef 100%);
+  padding: 24px 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .study-list-paper {
-  background: rgba(255, 255, 255, 0.95) !important;
-  backdrop-filter: blur(10px);
+  background: #ffffff !important;
+  backdrop-filter: blur(4px);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.study-list-paper:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
+  height: 75vh;
+  overflow-y: auto;
+  position: sticky;
+  top: 16px;
 }
 
 .study-item {
@@ -237,41 +253,17 @@
 }
 
 .study-item.selected {
-  background-color: rgba(25, 118, 210, 0.08);
-  border-left: 4px solid #1976d2;
+  background-color: #1976d2;
+  color: #fff;
 }
 
 .dicom-viewer-container {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: #141414;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.dicom-viewer-container:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-}
-
-.report-container {
-  animation: slideIn 0.5s ease-out;
-}
-
-.observation-item {
-  animation: fadeIn 0.3s ease-out;
-}
-
-.observation-item:hover {
-  background-color: rgba(0, 0, 0, 0.04);
-}
-
-.save-button {
-  transition: all 0.3s ease !important;
-}
-
-.save-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  min-height: 75vh;
+  padding: 0 !important;
 }
 
 /* Animations */

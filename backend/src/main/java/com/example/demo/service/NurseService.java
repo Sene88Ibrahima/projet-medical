@@ -3,9 +3,14 @@ package com.example.demo.service;
 import com.example.demo.dto.AppointmentDTO;
 import com.example.demo.dto.MessageDTO;
 import com.example.demo.dto.UserDTO;
+import com.example.demo.dto.MedicalRecordDTO;
+import com.example.demo.dto.MedicalImageDTO;
+import com.example.demo.service.EmailService;
 import com.example.demo.model.*;
 import com.example.demo.repository.AppointmentRepository;
 import com.example.demo.repository.MessageRepository;
+import com.example.demo.repository.MedicalRecordRepository;
+import com.example.demo.repository.MedicalImageRepository;
 import com.example.demo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -25,6 +30,9 @@ public class NurseService {
     private final UserRepository userRepository;
     private final AppointmentRepository appointmentRepository;
     private final MessageRepository messageRepository;
+    private final MedicalRecordRepository medicalRecordRepository;
+    private final MedicalImageRepository medicalImageRepository;
+    private final EmailService emailService;
 
     public List<UserDTO> getAllDoctors() {
         return userRepository.findByRole(Role.DOCTOR).stream()
@@ -108,6 +116,8 @@ public class NurseService {
                 .build();
 
         Message savedMessage = messageRepository.save(message);
+        // Send email notification
+        emailService.sendSimpleMessage(receiver.getEmail(), "Nouveau message", "Vous avez reçu un nouveau message de " + currentUser.getFirstName() + " " + currentUser.getLastName() + ".");
         return mapToMessageDTO(savedMessage);
     }
 
@@ -162,6 +172,88 @@ public class NurseService {
                 .content(message.getContent())
                 .sentAt(message.getSentAt())
                 .read(message.isRead())
+                .build();
+    }
+
+    /* ======== Appointments ======== */
+
+    public List<AppointmentDTO> getAllAppointments() {
+        return appointmentRepository.findAll().stream()
+                .map(this::mapToAppointmentDTO)
+                .collect(Collectors.toList());
+    }
+
+    /* ======== Medical Records ======== */
+
+    public List<MedicalRecordDTO> getAllMedicalRecords() {
+        return medicalRecordRepository.findAll().stream()
+                .map(this::mapToMedicalRecordDTO)
+                .collect(Collectors.toList());
+    }
+
+    public MedicalRecordDTO getMedicalRecordDetails(Long id) {
+        MedicalRecord record = medicalRecordRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Dossier médical non trouvé"));
+        return mapToMedicalRecordDTO(record);
+    }
+
+    public MedicalRecordDTO createMedicalRecord(MedicalRecordDTO dto) {
+        if (dto.getPatientId() == null || dto.getDoctorId() == null) {
+            throw new RuntimeException("PatientId et DoctorId sont requis");
+        }
+        User patient = userRepository.findById(dto.getPatientId())
+                .orElseThrow(() -> new RuntimeException("Patient non trouvé"));
+        User doctor = userRepository.findById(dto.getDoctorId())
+                .orElseThrow(() -> new RuntimeException("Médecin non trouvé"));
+
+        MedicalRecord record = MedicalRecord.builder()
+                .patient(patient)
+                .doctor(doctor)
+                .diagnosis(dto.getDiagnosis())
+                .treatment(dto.getTreatment())
+                .notes(dto.getNotes())
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        MedicalRecord saved = medicalRecordRepository.save(record);
+        return mapToMedicalRecordDTO(saved);
+    }
+
+    public void deleteMedicalRecord(Long id) {
+        if (!medicalRecordRepository.existsById(id)) {
+            throw new RuntimeException("Dossier médical non trouvé");
+        }
+        // delete associated images first
+        MedicalRecord rec = medicalRecordRepository.findById(id).get();
+        List<MedicalImage> images = medicalImageRepository.findByMedicalRecord(rec);
+        medicalImageRepository.deleteAll(images);
+        medicalRecordRepository.delete(rec);
+    }
+
+    private MedicalRecordDTO mapToMedicalRecordDTO(MedicalRecord record) {
+        List<MedicalImageDTO> imageDTOs = record.getMedicalImages() == null ? List.of() :
+                record.getMedicalImages().stream()
+                        .map(img -> MedicalImageDTO.builder()
+                                .id(img.getId())
+                                .orthancInstanceId(img.getOrthancInstanceId())
+                                .imageType(img.getImageType())
+                                .description(img.getDescription())
+                                .uploadedAt(img.getUploadedAt())
+                                .build())
+                        .collect(Collectors.toList());
+
+        return MedicalRecordDTO.builder()
+                .id(record.getId())
+                .patientId(record.getPatient().getId())
+                .patientName(record.getPatient().getFirstName() + " " + record.getPatient().getLastName())
+                .doctorId(record.getDoctor().getId())
+                .doctorName(record.getDoctor().getFirstName() + " " + record.getDoctor().getLastName())
+                .diagnosis(record.getDiagnosis())
+                .treatment(record.getTreatment())
+                .createdAt(record.getCreatedAt())
+                .notes(record.getNotes())
+                .medicalImages(imageDTOs)
+                .imageCount(imageDTOs.size())
                 .build();
     }
 }

@@ -49,8 +49,19 @@ const RegisterForm = () => {
             
             // Attendre un court instant pour s'assurer que tout est traité
             setTimeout(() => {
-                // Rediriger directement avec window.location après l'inscription réussie
-                window.location.href = '/dashboard';
+                const storedUser = localStorage.getItem('user');
+                if (storedUser) {
+                    const { dashboardUrl, role } = JSON.parse(storedUser);
+                    const target = dashboardUrl || {
+                        PATIENT: '/dashboard/patient',
+                        DOCTOR: '/dashboard/doctor',
+                        NURSE: '/dashboard/nurse',
+                        ADMIN: '/dashboard/admin',
+                    }[role] || '/dashboard';
+                    window.location.href = target;
+                } else {
+                    window.location.href = '/dashboard';
+                }
             }, 500);
         } catch (err) {
             console.error('Registration failed:', err);

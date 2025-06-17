@@ -1,0 +1,37 @@
+/* Global admin styles */
+
+.admin-page {
+    font-size: 0.9rem;
+}
+
+.admin-page h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+}
+
+/* Card tweaks */
+.admin-card {
+    background-color: #ffffff;
+    border: 1px solid #e9ecef;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.admin-card .card-body {
+    padding: 1rem 1.25rem;
+}
+
+/* Table tweaks */
+.table-admin {
+    font-size: 0.85rem;
+}
+
+.table-admin th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.table-admin tbody tr:hover {
+    background-color: #f6f6f6;
+}

@@ -4,6 +4,7 @@ import com.example.demo.dto.AppointmentDTO;
 import com.example.demo.dto.MedicalRecordDTO;
 import com.example.demo.dto.MessageDTO;
 import com.example.demo.dto.UserDTO;
+import com.example.demo.service.EmailService;
 import com.example.demo.dto.MedicalImageDTO;
 import com.example.demo.model.*;
 import com.example.demo.repository.AppointmentRepository;
@@ -32,6 +33,16 @@ public class DoctorService {
     private final MessageRepository messageRepository;
     private final MedicalRecordRepository medicalRecordRepository;
     private final MedicalImageRepository medicalImageRepository;
+    private final EmailService emailService;
+
+    /**
+     * Récupère tous les médecins du système
+     */
+    public List<UserDTO> getAllDoctors() {
+        return userRepository.findByRole(Role.DOCTOR).stream()
+                .map(this::mapToUserDTO)
+                .collect(Collectors.toList());
+    }
 
     /**
      * Récupère tous les patients du système
@@ -101,6 +112,8 @@ public class DoctorService {
                 .build();
 
         Message savedMessage = messageRepository.save(message);
+        // Send email notification
+        emailService.sendSimpleMessage(receiver.getEmail(), "Nouveau message", "Vous avez reçu un nouveau message de " + currentDoctor.getFirstName() + " " + currentDoctor.getLastName() + ".");
         return mapToMessageDTO(savedMessage);
     }
 
@@ -226,7 +239,8 @@ public class DoctorService {
                 System.out.println("Dossier médical mis à jour avec " + savedMedicalRecord.getMedicalImages().size() + " images");
             }
             
-            return mapToMedicalRecordDTO(savedMedicalRecord);
+            emailService.sendSimpleMessage(patient.getEmail(), "Nouveau dossier médical", "Votre médecin a ajouté un nouveau dossier médical. Connectez-vous pour le consulter.");
+                return mapToMedicalRecordDTO(savedMedicalRecord);
         } catch (Exception e) {
             System.err.println("Erreur détaillée lors de la création du dossier médical:");
             System.err.println("Type d'erreur: " + e.getClass().getName());

@@ -106,10 +106,12 @@
 
 .dicom-viewer-container {
   background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  padding: 20px;
-  margin: 20px;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  padding: 0; /* le Paper externe gère le padding si nécessaire */
+  margin: 0;
+  width: 100%;
+  max-width: none;
 }
 
 .dicom-header {
@@ -129,27 +131,29 @@
 
 .dicom-image-container {
   position: relative;
-  min-height: 500px;
+  height: 100%;
+  width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #f8f9fa;
+  background: #1e1e1e;
   border-radius: 8px;
   overflow: hidden;
 }
 
 .dicom-toolbar {
   position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 50%;
+  right: 20px;
+  transform: translateY(-50%);
   background: rgba(255, 255, 255, 0.9);
-  padding: 8px;
-  border-radius: 30px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 10px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   z-index: 10;
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .dicom-loading {
@@ -167,17 +171,22 @@
 }
 
 .dicom-image {
-  max-width: 100%;
-  max-height: calc(100vh - 200px);
+  width: 100%;
+  height: auto;
   object-fit: contain;
 }
 
 .toolbar-button {
   color: #2c3e50;
   transition: all 0.2s ease;
+  width: 44px;
+  height: 44px;
+  background: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
 }
 
 .toolbar-button:hover {
-  background-color: rgba(0, 0, 0, 0.08);
-  transform: scale(1.1);
+  background-color: #f0f0f0;
+  transform: scale(1.15);
 }

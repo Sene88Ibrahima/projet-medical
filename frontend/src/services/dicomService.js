@@ -283,6 +283,12 @@ const dicomService = {
     }
   },
 
+  // Url wadouri pour cornerstone
+  getWadoImageId: (instanceId) => {
+    // Utilise le endpoint REST existant qui renvoie le fichier DICOM brut
+    return `wadouri:${window.location.origin}/api/v1/dicom/instances/${instanceId}/file`;
+  },
+
   // Sauvegarder un rapport médical
   saveReport: async (reportData) => {
     try {

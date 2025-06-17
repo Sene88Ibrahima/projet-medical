@@ -36,6 +36,13 @@ public class User implements UserDetails {
     @Enumerated(EnumType.STRING)
     private Role role;
 
+    /**
+     * Statut du compte pour permettre la suspension/activation sans suppression.
+     */
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    private AccountStatus status = AccountStatus.ACTIVE;
+
     @ToString.Exclude
     @OneToMany(mappedBy = "patient")
     private List<Appointment> patientAppointments;
@@ -75,6 +82,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        // Si status est null (anciens comptes avant ajout du champ), considérer comme actif
+        return status == null || status == AccountStatus.ACTIVE;
     }
 }

@@ -38,6 +38,15 @@ public class DoctorController {
     }
 
     /**
+     * Récupérer tous les médecins
+     */
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/doctors")
+    public ResponseEntity<List<UserDTO>> getAllDoctors() {
+        return ResponseEntity.ok(doctorService.getAllDoctors());
+    }
+
+    /**
      * Récupérer tous les rendez-vous du médecin connecté
      */
     @PreAuthorize("isAuthenticated()")

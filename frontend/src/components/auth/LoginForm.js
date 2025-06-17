@@ -30,7 +30,19 @@ const LoginForm = () => {
             }
             
             // Redirection vers le dashboard
-            window.location.href = '/dashboard';
+            const storedUser = localStorage.getItem('user');
+            if (storedUser) {
+                const { dashboardUrl, role } = JSON.parse(storedUser);
+                const target = dashboardUrl || {
+                    PATIENT: '/dashboard/patient',
+                    DOCTOR: '/dashboard/doctor',
+                    NURSE: '/dashboard/nurse',
+                    ADMIN: '/dashboard/admin',
+                }[role] || '/dashboard';
+                window.location.href = target;
+            } else {
+                window.location.href = '/dashboard';
+            }
         } catch (err) {
             console.error('Login failed:', err);
             setError(err.message || 'Échec de la connexion. Veuillez vérifier vos identifiants.');

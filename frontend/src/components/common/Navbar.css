@@ -80,6 +80,13 @@
     display: block !important;
 }
 
+/* Force l'affichage de la zone de liens même si le collapse Bootstrap ne s'ouvre pas correctement */
+.navbar-collapse {
+    display: flex !important;
+    flex-grow: 1;
+    justify-content: flex-end;
+}
+
 @media (max-width: 991px) {
     .dropdown-menu {
         width: 100%;

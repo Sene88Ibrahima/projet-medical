@@ -45,6 +45,9 @@ instance.interceptors.request.use(
 // Ajouter un intercepteur pour les réponses
 instance.interceptors.response.use(
     (response) => {
+        if (response.data && response.data.id) {
+            localStorage.setItem('id', response.data.id);
+        }
         return response;
     },
     (error) => {

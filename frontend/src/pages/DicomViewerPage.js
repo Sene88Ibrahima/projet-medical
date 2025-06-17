@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DicomViewer from '../components/dicom/DicomViewer';
-import DicomReport from '../components/dicom/DicomReport';
+import MedicalReportPanel from '../components/dicom/MedicalReportPanel';
 import dicomService from '../services/dicomService';
 import './DicomViewerPage.css';
 import { 
@@ -16,8 +16,10 @@ import {
   Divider,
   Alert,
   Box,
-  Fade
+  Fade,
+  Button
 } from '@mui/material';
+import ReportModal from '../components/dicom/ReportModal';
 
 const DicomViewerPage = () => {
   const { patientId, studyId, instanceId } = useParams();
@@ -29,6 +31,7 @@ const DicomViewerPage = () => {
   const [selectedSeries, setSelectedSeries] = useState(null);
   const [selectedInstance, setSelectedInstance] = useState(null);
   const [annotations, setAnnotations] = useState([]);
+  const [reportOpen, setReportOpen] = useState(false);
   
   // Charger les études DICOM
   useEffect(() => {
@@ -212,7 +215,7 @@ const DicomViewerPage = () => {
 
   return (
     <div className="dicom-viewer-page">
-      <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      <Container maxWidth={false} disableGutters sx={{ mt: 2, mb: 2, px: 2 }}>
         <Fade in={error != null} timeout={300}>
           <div>
             {error && (
@@ -223,66 +226,68 @@ const DicomViewerPage = () => {
           </div>
         </Fade>
 
-        <Grid container spacing={3}>
-          {/* Liste des études et séries */}
-          <Grid item xs={12} md={3}>
-            <Paper elevation={3} className="study-list-paper" sx={{ p: 2, display: 'flex', flexDirection: 'column' }}>
-              <Typography variant="h6" gutterBottom>
-                Études DICOM
-              </Typography>
-              
-              {loading ? (
-                <Box className="loading-container">
-                  <CircularProgress className="loading-spinner" />
-                </Box>
-              ) : (
-                <List>
-                  {studies.map((study) => (
-                    <React.Fragment key={study.ID || study.id}>
-                      <ListItem 
-                        button 
-                        className={`study-item ${selectedStudy?.ID === study.ID || selectedStudy?.id === study.id ? 'selected' : ''}`}
-                        onClick={() => handleStudySelect(study)}
-                      >
-                        <ListItemText 
-                          primary={study.StudyDescription || 'Étude sans description'} 
-                          secondary={`Date: ${study.StudyDate || 'Non spécifiée'}`}
-                        />
-                      </ListItem>
-                      <Divider />
-                    </React.Fragment>
-                  ))}
-                </List>
-              )}
+        {/* Section principal: flex layout */}
+        <Box sx={{ display: 'flex', gap: 2, height: 'calc(100vh - 120px)' }}>
+          {/* Liste des études */}
+          <Paper elevation={3} className="study-list-paper" sx={{ p: 2, display: 'flex', flexDirection: 'column', width: 260, overflowY: 'auto' }}>
+            <Typography variant="h6" gutterBottom>
+              Études DICOM
+            </Typography>
+            
+            {loading ? (
+              <Box className="loading-container">
+                <CircularProgress className="loading-spinner" />
+              </Box>
+            ) : (
+              <List>
+                {studies.map((study) => (
+                  <React.Fragment key={study.ID || study.id}>
+                    <ListItem 
+                      button 
+                      className={`study-item ${selectedStudy?.ID === study.ID || selectedStudy?.id === study.id ? 'selected' : ''}`}
+                      onClick={() => handleStudySelect(study)}
+                    >
+                      <ListItemText 
+                        primary={study.StudyDescription || 'Étude sans description'} 
+                        secondary={`Date: ${study.StudyDate || 'Non spécifiée'}`}
+                      />
+                    </ListItem>
+                    <Divider />
+                  </React.Fragment>
+                ))}
+              </List>
+            )}
+          </Paper>
+
+          {/* Dicom Viewer */}
+          <Box sx={{ flex: 1, display: 'flex' }}>
+            <Paper elevation={3} className="dicom-viewer-container" sx={{ p: 0, width: '100%', height: '100%' }}>
+              <DicomViewer 
+                instanceId={selectedInstance ? (selectedInstance.orthanc_instance_id || selectedInstance.ID || selectedInstance.id) : null}
+                onAnnotationChange={handleAnnotationChange}
+              />
             </Paper>
-          </Grid>
+          </Box>
 
-          {/* Zone principale */}
-          <Grid item xs={12} md={9}>
-            <Grid container spacing={3}>
-              {/* Visualiseur DICOM */}
-              <Grid item xs={12} md={8}>
-                <Paper elevation={3} className="dicom-viewer-container" sx={{ p: 2 }}>
-                  <DicomViewer 
-                    instanceId={selectedInstance ? (selectedInstance.orthanc_instance_id || selectedInstance.ID || selectedInstance.id) : null}
-                    onAnnotationChange={handleAnnotationChange}
-                  />
-                </Paper>
-              </Grid>
-
-              {/* Rapport médical */}
-              <Grid item xs={12} md={4}>
-                <Paper elevation={3} className="report-container" sx={{ p: 2, height: '100%' }}>
-                  <DicomReport
-                    instanceId={selectedInstance ? (selectedInstance.orthanc_instance_id || selectedInstance.ID || selectedInstance.id) : null}
-                    onSave={handleSaveReport}
-                  />
-                </Paper>
-              </Grid>
-            </Grid>
-          </Grid>
-        </Grid>
+          {/* Rapport médical */}
+          <Paper elevation={3} className="report-container" sx={{ p: 0, width: 340, position: 'sticky', top: 16, height: 'calc(100vh - 120px)', overflowY: 'auto' }}>
+            <MedicalReportPanel
+              instanceId={selectedInstance ? (selectedInstance.orthanc_instance_id || selectedInstance.ID || selectedInstance.id) : null}
+              onSave={handleSaveReport}
+            />
+            <Button variant="contained" onClick={() => setReportOpen(true)} fullWidth sx={{ mt: 1 }}>
+              Plein écran
+            </Button>
+          </Paper>
+        </Box>
       </Container>
+
+      <ReportModal
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        instanceId={selectedInstance ? (selectedInstance.orthanc_instance_id || selectedInstance.ID || selectedInstance.id) : null}
+        onSave={handleSaveReport}
+      />
     </div>
   );
 };

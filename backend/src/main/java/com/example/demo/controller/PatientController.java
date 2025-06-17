@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -67,6 +68,15 @@ public class PatientController {
     public ResponseEntity<AppointmentDTO> deleteAppointment(@PathVariable Long id) {
         log.info("Annulation du rendez-vous ID: {}", id);
         return ResponseEntity.ok(patientService.cancelAppointment(id));
+    }
+
+    @PostMapping("/medical-info")
+    @PreAuthorize("hasRole('PATIENT')")
+    public ResponseEntity<Void> saveMedicalInfo(@RequestBody Map<String, Object> medicalInfo,
+                                                Authentication authentication) {
+        log.info("Sauvegarde des informations médicales pour le patient: {}", authentication.getName());
+        patientService.saveMedicalInfo(authentication.getName(), medicalInfo);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/medical-records")

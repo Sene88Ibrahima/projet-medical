@@ -26,6 +26,9 @@ import {
   Add as AddIcon
 } from '@mui/icons-material';
 import './MedicalRecordsPage.css';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Box, IconButton, Chip, Stack, ImageList, ImageListItem, ImageListItemBar } from '@mui/material';
+import { Close as CloseIcon, Fullscreen as FullscreenIcon, FullscreenExit as FullscreenExitIcon, PictureAsPdf as PictureAsPdfIcon, Edit as EditIcon } from '@mui/icons-material';
+import dicomService from '../services/dicomService';
 
 const MedicalRecordsPage = () => {
     const { user } = useAuth();
@@ -51,6 +54,20 @@ const MedicalRecordsPage = () => {
     
     // Liste fictive de patients (pour le dropdown)
     const [patients, setPatients] = useState([]);
+
+    // État et gestionnaires pour la boîte de dialogue de détails
+    // Tabs removed – details shown in single view
+    const [detailsFullScreen, setDetailsFullScreen] = useState(false);
+
+    
+
+    const handleToggleFullScreen = () => {
+        setDetailsFullScreen(prev => !prev);
+    };
+
+    const handleExportPdf = () => {
+        window.print();
+    };
 
     const navigate = useNavigate();
 
@@ -80,14 +97,18 @@ const MedicalRecordsPage = () => {
                 setFetchAttempted(true);
                 
                 // Déterminer l'endpoint en fonction du rôle de l'utilisateur
-                let endpoint;
+                let baseEndpoint;
                 if (user.role === 'DOCTOR') {
-                    endpoint = '/api/v1/doctor/medical-records';
+                    baseEndpoint = '/api/v1/doctor';
+                } else if (user.role === 'NURSE') {
+                    baseEndpoint = '/api/v1/nurse';
                 } else if (user.role === 'PATIENT') {
-                    endpoint = '/api/v1/patient/medical-records';
+                    baseEndpoint = '/api/v1/patient';
                 } else {
-                    endpoint = '/api/v1/medical-records';
+                    baseEndpoint = '/api/v1';
                 }
+                
+                const endpoint = `${baseEndpoint}/medical-records`;
                 
                 console.log("Endpoint utilisé:", endpoint);
                 const response = await axios.get(endpoint);
@@ -501,100 +522,123 @@ const MedicalRecordsPage = () => {
                 </Modal.Body>
             </Modal>
             
-            {/* Modal pour afficher les détails d'un dossier médical */}
-            <Modal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} size="lg">
-                <Modal.Header closeButton>
-                    <Modal.Title>Détails du dossier médical</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    {selectedRecord && (
-                        <div>
-                            <div className="mb-3">
-                                <h5>Informations générales</h5>
-                                <p><strong>Date de création:</strong> {new Date(selectedRecord.createdAt).toLocaleDateString()}</p>
-                                <p>
-                                    <strong>{user?.role === 'DOCTOR' ? 'Patient:' : 'Médecin:'}</strong> {
-                                        user?.role === 'DOCTOR'
-                                            ? selectedRecord.patientName
-                                            : selectedRecord.doctorName
-                                    }
-                                </p>
-                            </div>
+            {/* Dialog détaillé du dossier médical (MUI) */}
+<Dialog
+    open={showDetailsModal}
+    onClose={() => setShowDetailsModal(false)}
+    fullScreen={detailsFullScreen}
+    maxWidth="md"
+    PaperProps={{ sx: { width: detailsFullScreen ? '100%' : 720, maxHeight: '90vh', border: '4px solid #90caf9', boxShadow: 8 } }}
+>
+    {selectedRecord && (
+        <>
+            <DialogTitle sx={{ m: 0, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: 'primary.main', color: 'common.white' }}>
+                <Typography variant="h6">Détails du dossier médical</Typography>
+                <Box>
+                    <IconButton onClick={handleToggleFullScreen} size="large" sx={{ color: 'common.white' }}>
+                        {detailsFullScreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
+                    </IconButton>
+                    <IconButton onClick={() => setShowDetailsModal(false)} size="large" sx={{ color: 'common.white' }}>
+                        <CloseIcon />
+                    </IconButton>
+                </Box>
+            </DialogTitle>
+
+            <DialogContent dividers sx={{ p: 0 }}>
+
+                <Box sx={{ p: 3, maxHeight: detailsFullScreen ? 'calc(100vh - 160px)' : 600, overflowY: 'auto' }}>
+                    
+                        <Stack spacing={3}>
+                            <Paper elevation={0} sx={{ bgcolor:'#F5F7FA', p:2, borderRadius:2 }}>
+                                <Typography variant="h6" sx={{ fontWeight: 'bold', mb:1 }}>Informations générales</Typography>
+                                <Stack spacing={1}>
+                                    <Stack direction="row" justifyContent="space-between">
+                                        <Typography variant="subtitle2" sx={{ fontWeight:'bold', color:'primary.main' }}>Date de création</Typography>
+                                        <Typography>{new Date(selectedRecord.createdAt).toLocaleDateString()}</Typography>
+                                    </Stack>
+                                    <Stack direction="row" justifyContent="space-between">
+                                        <Typography variant="subtitle2" sx={{ fontWeight:'bold', color:'primary.main' }}>{user?.role === 'DOCTOR' ? 'Patient' : 'Médecin'}</Typography>
+                                        <Typography fontWeight="bold">{user?.role === 'DOCTOR' ? selectedRecord.patientName : selectedRecord.doctorName}</Typography>
+                                    </Stack>
+                                </Stack>
+                            </Paper>
                             
-                            <div className="mb-3">
-                                <h5>Diagnostic médical</h5>
-                                <p>{selectedRecord.diagnosis}</p>
-                            </div>
                             
+
+                            {selectedRecord.diagnosis && (
+                            <Paper elevation={0} sx={{ bgcolor: '#ffebee', p:2, borderRadius:2 }}>
+                                <Typography variant="h6" sx={{ fontWeight: 'bold', mb:1 }}>Diagnostic médical</Typography>
+                                <Typography>{selectedRecord.diagnosis}</Typography>
+                            </Paper>
+                                
+                            )}
+
                             {selectedRecord.treatment && (
-                                <div className="mb-3">
-                                    <h5>Traitement prescrit</h5>
-                                    <p>{selectedRecord.treatment}</p>
-                                </div>
+                            <Paper elevation={0} sx={{ bgcolor: '#e8f5e9', p:2, borderRadius:2 }}>
+                                <Typography variant="h6" sx={{ fontWeight: 'bold', mb:1 }}>Traitement prescrit</Typography>
+                                <Typography>{selectedRecord.treatment}</Typography>
+                            </Paper>
                             )}
-                            
+
                             {selectedRecord.notes && (
-                                <div className="mb-3">
-                                    <h5>Notes</h5>
-                                    <p>{selectedRecord.notes}</p>
-                                </div>
+                            <Paper elevation={0} sx={{ bgcolor: '#fffde7', p:2, borderRadius:2 }}>
+                                <Typography variant="h6" sx={{ fontWeight: 'bold', mb:1 }}>Notes</Typography>
+                                <Typography>{selectedRecord.notes}</Typography>
+                            </Paper>
                             )}
-                            
-                            {selectedRecord.medicalImages && selectedRecord.medicalImages.length > 0 && (
-                                <div className="mb-3">
-                                    <h5>Images médicales</h5>
-                                    <div className="row">
-                                        {selectedRecord.medicalImages.map((image, index) => (
-                                            <div className="col-md-6 mb-3" key={image.id || index}>
-                                                <div className="card">
-                                                    <div className="card-body">
-                                                        <p className="card-text">{image.description || `Image ${index + 1}`}</p>
-                                                        {image.orthancInstanceId && (
-                                                            <Button
-                                                                variant="primary"
-                                                                size="sm"
-                                                                onClick={() => window.open(`/patients/${selectedRecord.patientId}/dicom/${image.orthancInstanceId}`, '_blank')}
-                                                            >
-                                                                Visualiser l'image DICOM
-                                                            </Button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                            
-                            {/* Section des images DICOM avec visualiseur intégré */}
-                            {selectedRecord && selectedRecord.patient && (
-                                <div className="mb-3">
-                                    <h5>Visualisation des images DICOM</h5>
-                                    <div className="row">
-                                        <div className="col-md-12">
-                                            <div className="dicom-viewer-container">
-                                                <iframe 
-                                                    src={`http://localhost:8042/app/explorer.html#patient?patientId=${selectedRecord.patient.id}`}
-                                                    title="Visualiseur DICOM"
-                                                    className="dicom-viewer"
-                                                    allowFullScreen
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        </Stack>
+                    
+                        {selectedRecord.medicalImages && selectedRecord.medicalImages.length > 0 && (
+                        <>
+                            <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>
+                                Images médicales ({selectedRecord.medicalImages.length})
+                            </Typography>
+                            <ImageList cols={detailsFullScreen ? 4 : 3} gap={8} rowHeight={160}>
+                                {selectedRecord.medicalImages.map((image, index) => (
+                                    <ImageListItem key={image.id || index}>
+                                        <img
+                                            src={dicomService.getInstanceImageUrl ? dicomService.getInstanceImageUrl(image.orthancInstanceId) : `/api/v1/dicom/instances/${image.orthancInstanceId}/preview`}
+                                            alt={image.description || `Image ${index + 1}`}
+                                            loading="lazy"
+                                            style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                                        />
+                                        <ImageListItemBar
+                                            title={image.description || `Image ${index + 1}`}
+                                            sx={{ '.MuiImageListItemBar-title': { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }}
+                                            actionIcon={
+                                                <IconButton
+                                                    color="inherit"
+                                                    onClick={() => window.open(`/patients/${selectedRecord.patientId}/dicom/${image.orthancInstanceId}`, '_blank')}
+                                                >
+                                                    <ViewIcon />
+                                                </IconButton>
+                                            }
+                                        />
+                                    </ImageListItem>
+                                ))}
+                            </ImageList>
+                        </>
                     )}
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button variant="secondary" onClick={() => setShowDetailsModal(false)}>
-                        Fermer
+                </Box>
+            </DialogContent>
+
+            <DialogActions sx={{ p: 2 }}>
+                <Button variant="contained" onClick={() => setShowDetailsModal(false)} sx={{ backgroundColor: 'grey.300', color: 'grey.900', textTransform: 'none', px: 3, '&:hover': { backgroundColor: 'grey.400' } }}>Fermer</Button>
+                <Button variant="contained" color="secondary" startIcon={<PictureAsPdfIcon />} onClick={handleExportPdf} sx={{ textTransform: 'none', px: 3, bgcolor: 'secondary.main', '&:hover': { bgcolor: 'secondary.dark' } }}>Exporter PDF</Button>
+                {user?.role === 'DOCTOR' && (
+                    <Button variant="contained" color="primary" startIcon={<EditIcon />} onClick={() => navigate(`/doctor/medical-records/${selectedRecord.id}/edit`)} sx={{ textTransform: 'none', px: 3 }}>
+                        Modifier
                     </Button>
-                </Modal.Footer>
-            </Modal>
-        </div>
-    );
+                )}
+            </DialogActions>
+        </>
+    )}
+</Dialog>
+
+</div>
+);
 };
+
+
 
 export default MedicalRecordsPage;

@@ -29,13 +29,13 @@ public class OrthancController {
     }
 
     @GetMapping("/studies/{studyId}")
-    @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN', 'PATIENT', 'NURSE')")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<DicomStudyDTO> getStudy(@PathVariable String studyId) {
         return ResponseEntity.ok(orthancService.getStudy(studyId));
     }
 
     @GetMapping("/studies")
-    @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN', 'PATIENT', 'NURSE')")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<List<DicomStudyDTO>> getAllStudies(
             @RequestParam(required = false) String patientId) {
         System.out.println("Requête reçue pour /api/v1/dicom/studies avec patientId = " + patientId);
@@ -51,7 +51,7 @@ public class OrthancController {
     }
     
     @GetMapping("/study-ids")
-    @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN', 'PATIENT', 'NURSE')")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<List<String>> getAllStudyIds(
             @RequestParam(required = false) String patientId) {
         System.out.println("Requête reçue pour /api/v1/dicom/study-ids avec patientId = " + patientId);
@@ -84,13 +84,13 @@ public class OrthancController {
     }
 
     @GetMapping("/series/{seriesId}")
-    @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN', 'PATIENT', 'NURSE')")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<DicomSeriesDTO> getSeries(@PathVariable String seriesId) {
         return ResponseEntity.ok(orthancService.getSeries(seriesId));
     }
 
     @GetMapping("/instances/{instanceId}")
-    @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN', 'PATIENT', 'NURSE')")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<DicomInstanceDTO> getInstance(@PathVariable String instanceId) {
         return ResponseEntity.ok(orthancService.getInstance(instanceId));
     }
@@ -104,7 +104,7 @@ public class OrthancController {
     }
 
     @GetMapping("/instances/{instanceId}/preview")
-    @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN', 'PATIENT', 'NURSE')")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<byte[]> getInstancePreview(@PathVariable String instanceId) {
         try {
             byte[] imageData = orthancService.getInstancePreview(instanceId);
@@ -131,7 +131,7 @@ public class OrthancController {
     }
 
     @GetMapping(value = "/instances/{instanceId}/image", produces = MediaType.IMAGE_JPEG_VALUE)
-    @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN', 'PATIENT', 'NURSE')")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<byte[]> getInstanceImage(@PathVariable String instanceId) {
         try {
             byte[] imageData = orthancService.getInstanceImage(instanceId);
@@ -158,7 +158,7 @@ public class OrthancController {
     }
 
     @GetMapping(value = "/instances/{instanceId}/file")
-    @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN', 'PATIENT', 'NURSE')")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<byte[]> getInstanceFile(@PathVariable String instanceId) {
         try {
             byte[] dicomData = orthancService.getInstanceDicomFile(instanceId);

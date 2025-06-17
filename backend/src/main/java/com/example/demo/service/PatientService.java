@@ -4,12 +4,14 @@ import com.example.demo.dto.AppointmentDTO;
 import com.example.demo.dto.UserDTO;
 import com.example.demo.dto.MedicalRecordDTO;
 import com.example.demo.dto.MessageDTO;
+import com.example.demo.service.EmailService;
 import com.example.demo.model.*;
 import com.example.demo.repository.AppointmentRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.repository.MedicalRecordRepository;
 import com.example.demo.repository.MessageRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -17,8 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -28,6 +32,7 @@ public class PatientService {
     private final AppointmentRepository appointmentRepository;
     private final MedicalRecordRepository medicalRecordRepository;
     private final MessageRepository messageRepository;
+    private final EmailService emailService;
 
     public List<UserDTO> getAllDoctors() {
         return userRepository.findByRole(Role.DOCTOR).stream()
@@ -85,6 +90,11 @@ public class PatientService {
         return mapToAppointmentDTO(updatedAppointment);
     }
 
+    public void saveMedicalInfo(String email, Map<String, Object> medicalInfo) {
+        // TODO: persister ces données dans la base. Pour l'instant juste log.
+        log.info("[saveMedicalInfo] email: {} données: {}", email, medicalInfo);
+    }
+
     public AppointmentDTO cancelAppointment(Long id) {
         User currentPatient = getCurrentUser();
         Appointment appointment = appointmentRepository.findById(id)
@@ -132,6 +142,8 @@ public class PatientService {
                 .build();
 
         Message savedMessage = messageRepository.save(message);
+        // Send email notification to the receiver
+        emailService.sendSimpleMessage(receiver.getEmail(), "Nouveau message", "Vous avez reçu un nouveau message de " + currentPatient.getFirstName() + " " + currentPatient.getLastName() + ".");
         return mapToMessageDTO(savedMessage);
     }
 
